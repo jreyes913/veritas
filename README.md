@@ -18,10 +18,10 @@ xdg-open REGULA.html    # Linux
 start REGULA.html       # Windows
 ```
 
-Or enable GitHub Pages in your repository settings (**Settings → Pages → Source → main**) and access it at:
+Or view it at Github Pages:
 
 ```
-https://<your-username>.github.io/<repo-name>/REGULA.html
+https://jreyes913.github.io/veritas/REGULA.html
 ```
 
 ---
