@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+
+  <!-- Left stroke of V — red -->
+  <line x1="15" y1="15" x2="50" y2="82"
+        stroke="#E63946" stroke-width="22"
+        stroke-linecap="round"/>
+
+  <!-- Right stroke of V — green -->
+  <line x1="50" y1="82" x2="85" y2="15"
+        stroke="#2DC653" stroke-width="22"
+        stroke-linecap="round"/>
+
+</svg>

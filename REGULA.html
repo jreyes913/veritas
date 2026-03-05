@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>REGULA — The Rule of Truth</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=IBM+Plex+Mono:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --red:      #E63946;
+    --green:    #2DC653;
+    --bg:       #0a0f0d;
+    --bg2:      #0f1610;
+    --bg3:      #141e16;
+    --border:   #1e2e20;
+    --text:     #c8d8ca;
+    --muted:    #4a5e4d;
+    --heading:  #e8f0e9;
+    --mono:     'IBM Plex Mono', monospace;
+    --sans:     'IBM Plex Sans', sans-serif;
+    --serif:    'Cinzel', serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.8;
+    min-height: 100vh;
+  }
+
+  /* ── Scanline overlay ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.07) 2px,
+      rgba(0,0,0,0.07) 4px
+    );
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  /* ── Layout ── */
+  .wrap {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 0 2rem 6rem;
+  }
+
+  /* ── Hero ── */
+  .hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 5rem 0 3.5rem;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+  }
+
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120px;
+    height: 1px;
+    background: linear-gradient(90deg, var(--red), var(--green));
+  }
+
+  /* ── Inline SVG logo ── */
+  .logo {
+    width: 72px;
+    height: 72px;
+    margin-bottom: 2rem;
+    filter: drop-shadow(0 0 18px rgba(45,198,83,0.25))
+            drop-shadow(0 0 8px rgba(230,57,70,0.2));
+    animation: breathe 4s ease-in-out infinite;
+  }
+
+  @keyframes breathe {
+    0%, 100% { filter: drop-shadow(0 0 18px rgba(45,198,83,0.25)) drop-shadow(0 0 8px rgba(230,57,70,0.2)); }
+    50%       { filter: drop-shadow(0 0 28px rgba(45,198,83,0.45)) drop-shadow(0 0 14px rgba(230,57,70,0.35)); }
+  }
+
+  .hero-eyebrow {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.6rem;
+  }
+
+  .hero-title {
+    font-family: var(--serif);
+    font-size: clamp(2rem, 6vw, 3.2rem);
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    background: linear-gradient(135deg, #e8f0e9 30%, #2DC653 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1.1;
+    text-align: center;
+  }
+
+  .hero-subtitle {
+    font-family: var(--serif);
+    font-size: 0.85rem;
+    letter-spacing: 0.2em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-top: 0.6rem;
+  }
+
+  .hero-tagline {
+    margin-top: 1.8rem;
+    font-size: 0.95rem;
+    color: var(--text);
+    text-align: center;
+    max-width: 520px;
+    font-weight: 300;
+    font-style: italic;
+    opacity: 0.8;
+  }
+
+  .ver-badge {
+    margin-top: 1.4rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.3rem 0.8rem;
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--green);
+    letter-spacing: 0.05em;
+  }
+
+  .ver-badge span { color: var(--muted); }
+
+  /* ── Section headings ── */
+  .section {
+    margin-top: 3.5rem;
+  }
+
+  .section-number {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 0.4rem;
+  }
+
+  h2 {
+    font-family: var(--serif);
+    font-size: 1.1rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--heading);
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 1.2rem;
+    position: relative;
+  }
+
+  h2::before {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    width: 2.5rem;
+    height: 1px;
+    background: var(--green);
+  }
+
+  p {
+    margin-bottom: 0.9rem;
+    font-weight: 300;
+  }
+
+  strong {
+    color: var(--heading);
+    font-weight: 500;
+  }
+
+  /* ── Code blocks ── */
+  pre {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--green);
+    border-radius: 0 4px 4px 0;
+    padding: 1rem 1.2rem;
+    overflow-x: auto;
+    margin: 1rem 0 1.2rem;
+    position: relative;
+  }
+
+  pre::before {
+    content: 'VER';
+    position: absolute;
+    top: 0.5rem;
+    right: 0.8rem;
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+  }
+
+  /* C code blocks get red accent */
+  pre.c-block {
+    border-left-color: var(--red);
+  }
+  pre.c-block::before { content: 'C'; }
+
+  code {
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    line-height: 1.7;
+    color: #a8d8b0;
+  }
+
+  /* Inline code */
+  p code, li code, td code {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 0.05em 0.35em;
+    font-size: 0.8rem;
+    color: var(--green);
+  }
+
+  /* ── Keyword highlighting inside pre ── */
+  .kw-ctrl  { color: #E63946; }   /* control: If, For, End, Otherwise */
+  .kw-decl  { color: #FFB347; }   /* declaration: Create, Define, Include */
+  .kw-call  { color: #74C7EC; }   /* Call, Replace */
+  .kw-type  { color: #2DC653; }   /* types: integer, float, pointer… */
+  .kw-ident { color: #CDB4DB; }   /* 'identifiers' */
+  .kw-str   { color: #A8FF78; }   /* "strings" */
+  .kw-num   { color: #C77DFF; }   /* numbers */
+  .kw-op    { color: #FFD93D; }   /* operators: plus, minus… */
+  .kw-cmt   { color: #4a5e4d; font-style: italic; }  /* comments */
+
+  /* ── Tables ── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0 1.2rem;
+    font-size: 0.85rem;
+  }
+
+  th {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: left;
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  td {
+    padding: 0.55rem 1rem;
+    border-bottom: 1px solid var(--border);
+    font-weight: 300;
+  }
+
+  td:first-child { font-family: var(--mono); font-size: 0.8rem; color: var(--green); }
+  td:last-child  { font-family: var(--mono); font-size: 0.8rem; color: #FFB347; }
+
+  tr:hover td { background: var(--bg3); }
+
+  /* ── Lists ── */
+  ul, ol {
+    padding-left: 1.4rem;
+    margin-bottom: 0.9rem;
+  }
+
+  li {
+    margin-bottom: 0.3rem;
+    font-weight: 300;
+  }
+
+  li::marker { color: var(--green); }
+
+  /* ── Rule pills (reserved keywords) ── */
+  .keyword-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 1rem 0;
+  }
+
+  .kpill {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    padding: 0.25rem 0.65rem;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: var(--red);
+    letter-spacing: 0.04em;
+  }
+
+  /* ── Callout boxes ── */
+  .callout {
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--red);
+    background: var(--bg2);
+    border-radius: 0 4px 4px 0;
+    padding: 0.8rem 1.1rem;
+    margin: 1rem 0;
+    font-size: 0.88rem;
+  }
+
+  .callout strong { color: var(--red); }
+
+  /* ── Philosophy block ── */
+  .philosophy {
+    border: 1px solid var(--border);
+    background: var(--bg3);
+    border-radius: 6px;
+    padding: 1.6rem 2rem;
+    margin: 1.2rem 0;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .philosophy::before {
+    content: '"';
+    position: absolute;
+    top: -0.5rem;
+    left: 1rem;
+    font-family: var(--serif);
+    font-size: 6rem;
+    color: var(--green);
+    opacity: 0.08;
+    line-height: 1;
+    pointer-events: none;
+  }
+
+  .philosophy p {
+    font-size: 1rem;
+    line-height: 1.9;
+    font-style: italic;
+    color: var(--heading);
+    font-weight: 300;
+    margin: 0;
+  }
+
+  /* ── Example pair (ver + C side by side) ── */
+  .code-pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin: 1rem 0 1.2rem;
+  }
+
+  @media (max-width: 640px) {
+    .code-pair { grid-template-columns: 1fr; }
+  }
+
+  .code-pair pre { margin: 0; }
+
+  .code-pair-label {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 0.4rem;
+  }
+
+  .code-pair-label.ver { color: var(--green); }
+  .code-pair-label.c   { color: var(--red); }
+
+  /* ── Footer ── */
+  footer {
+    margin-top: 5rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+  }
+
+  footer span { color: var(--green); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ── HERO ── -->
+  <header class="hero">
+    <!-- Inline V logo -->
+    <svg class="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+      <line x1="15" y1="15" x2="50" y2="82" stroke="#E63946" stroke-width="22" stroke-linecap="round"/>
+      <line x1="50" y1="82" x2="85" y2="15" stroke="#2DC653" stroke-width="22" stroke-linecap="round"/>
+    </svg>
+    <p class="hero-eyebrow">Lingua Programmatica</p>
+    <h1 class="hero-title">Veritas</h1>
+    <p class="hero-subtitle">The True Programming Language</p>
+    <p class="hero-tagline">A language designed to resemble clear, structured human English while remaining deterministic and easy to parse.</p>
+    <div class="ver-badge"><span>file extension</span> .ver</div>
+  </header>
+
+  <!-- ── 1. PHILOSOPHY ── -->
+  <section class="section">
+    <p class="section-number">§ 01</p>
+    <h2>Philosophy</h2>
+    <div class="philosophy">
+      <p>Veritas prioritizes <strong>readability over typing speed</strong>. Programs should read like well-structured English instructions. Every instruction must follow strict grammatical rules so that the compiler can translate the program into C code without ambiguity.</p>
+    </div>
+  </section>
+
+  <!-- ── 2. FILE EXTENSION ── -->
+  <section class="section">
+    <p class="section-number">§ 02</p>
+    <h2>File Extension</h2>
+    <p>All Veritas source files must use the <code>.ver</code> file extension.</p>
+    <pre><code>example.ver</code></pre>
+  </section>
+
+  <!-- ── 3. SENTENCE TERMINATION ── -->
+  <section class="section">
+    <p class="section-number">§ 03</p>
+    <h2>Sentence Termination</h2>
+    <p>Every statement must end with a <strong>period (<code>.</code>)</strong>. Even structural constructs eventually terminate with a statement that ends in a period.</p>
+    <pre><code><span class="kw-decl">Create</span> <span class="kw-ident">'x'</span> <span class="kw-type">as an integer</span>.</code></pre>
+  </section>
+
+  <!-- ── 4. COMMENTS ── -->
+  <section class="section">
+    <p class="section-number">§ 04</p>
+    <h2>Comments</h2>
+    <p>Comments use <strong>C-style block syntax</strong>. Inline and multi-line comments are both allowed.</p>
+    <pre><code><span class="kw-cmt">/* This variable stores the result */</span>
+<span class="kw-decl">Create</span> <span class="kw-ident">'result'</span> <span class="kw-type">as a float</span> with value <span class="kw-num">2.0</span>.</code></pre>
+  </section>
+
+  <!-- ── 5. IDENTIFIERS ── -->
+  <section class="section">
+    <p class="section-number">§ 05</p>
+    <h2>Identifiers</h2>
+    <p>Variable names, function names, and array names must be enclosed in <strong>single quotes</strong>. This prevents ambiguity between English keywords and identifiers.</p>
+    <pre><code><span class="kw-ident">'x'</span>
+<span class="kw-ident">'result'</span>
+<span class="kw-ident">'safeSqrt'</span>
+<span class="kw-ident">'values'</span></code></pre>
+  </section>
+
+  <!-- ── 6. STRING LITERALS ── -->
+  <section class="section">
+    <p class="section-number">§ 06</p>
+    <h2>String Literals</h2>
+    <p>String literals must be enclosed in <strong>double quotes</strong>.</p>
+    <pre><code><span class="kw-str">"Hello world\n"</span>
+<span class="kw-str">"sqrt(%f) = %f\n"</span></code></pre>
+  </section>
+
+  <!-- ── 7. LIBRARY INCLUSION ── -->
+  <section class="section">
+    <p class="section-number">§ 07</p>
+    <h2>Library Inclusion</h2>
+    <pre><code><span class="kw-decl">Include</span> the library <span class="kw-ident">'stdio.h'</span>.
+<span class="kw-decl">Include</span> the library <span class="kw-ident">'math.h'</span>.
+<span class="kw-decl">Include</span> the header <span class="kw-ident">'my_header.h'</span>.</code></pre>
+  </section>
+
+  <!-- ── 8. PROGRAM DECLARATION ── -->
+  <section class="section">
+    <p class="section-number">§ 08</p>
+    <h2>Program Declaration</h2>
+    <p>Every program must open and close with matching declaration statements.</p>
+    <pre><code><span class="kw-ctrl">This is the program</span> <span class="kw-ident">'program_name'</span>.
+<span class="kw-cmt">/* ... body ... */</span>
+<span class="kw-ctrl">End of the program</span> <span class="kw-ident">'program_name'</span>.</code></pre>
+  </section>
+
+  <!-- ── 9. VARIABLE CREATION ── -->
+  <section class="section">
+    <p class="section-number">§ 09</p>
+    <h2>Variable Creation</h2>
+    <pre><code><span class="kw-decl">Create</span> <span class="kw-ident">'result'</span> <span class="kw-type">as a float</span>.
+<span class="kw-decl">Create</span> <span class="kw-ident">'count'</span> <span class="kw-type">as an integer</span> with value <span class="kw-num">1</span>.
+<span class="kw-decl">Create</span> <span class="kw-ident">'letter'</span> <span class="kw-type">as a char</span>.</code></pre>
+  </section>
+
+  <!-- ── 10. ARRAY CREATION ── -->
+  <section class="section">
+    <p class="section-number">§ 10</p>
+    <h2>Array Creation</h2>
+    <p>Arrays may optionally be initialized with values. Items are separated with commas; the final item is preceded by <strong>and</strong>.</p>
+    <pre><code><span class="kw-decl">Create</span> <span class="kw-ident">'values'</span> <span class="kw-type">as a float array</span> of size <span class="kw-num">5</span> with values:
+<span class="kw-num">4.0</span>,
+<span class="kw-num">9.0</span>,
+<span class="kw-num">0.0</span>,
+<span class="kw-num">-5.0</span>,
+and <span class="kw-num">16.0</span>.</code></pre>
+  </section>
+
+  <!-- ── 11. FUNCTION DEFINITION ── -->
+  <section class="section">
+    <p class="section-number">§ 11</p>
+    <h2>Function Definition</h2>
+    <pre><code><span class="kw-decl">Define</span> the function <span class="kw-ident">'safeSqrt'</span>
+with <span class="kw-ident">'x'</span> <span class="kw-type">as a float</span>
+and <span class="kw-ident">'result'</span> <span class="kw-type">as a float pointer</span>
+returning <span class="kw-type">nothing</span>.
+
+    <span class="kw-cmt">/* body */</span>
+
+<span class="kw-ctrl">End function</span> <span class="kw-ident">'safeSqrt'</span>.</code></pre>
+  </section>
+
+  <!-- ── 12. FUNCTION CALLS ── -->
+  <section class="section">
+    <p class="section-number">§ 12</p>
+    <h2>Function Calls</h2>
+    <pre><code><span class="kw-call">Call</span> <span class="kw-ident">'sqrt'</span> with <span class="kw-ident">'x'</span>, stored to <span class="kw-ident">'y'</span>.
+<span class="kw-call">Call</span> <span class="kw-ident">'printf'</span> with <span class="kw-str">"Hello\n"</span>, stored to nothing.</code></pre>
+  </section>
+
+  <!-- ── 13 & 14. ADDRESS / POINTER ── -->
+  <section class="section">
+    <p class="section-number">§ 13 – 14</p>
+    <h2>Address &amp; Pointer Access</h2>
+    <pre><code><span class="kw-call">Call</span> <span class="kw-ident">'safeSqrt'</span> with <span class="kw-ident">'x'</span> and the address of <span class="kw-ident">'result'</span>, stored to nothing.
+<span class="kw-call">Replace</span> value at <span class="kw-ident">'result'</span> with <span class="kw-num">0.0</span>.</code></pre>
+  </section>
+
+  <!-- ── 15. ASSIGNMENT ── -->
+  <section class="section">
+    <p class="section-number">§ 15</p>
+    <h2>Assignment</h2>
+    <pre><code><span class="kw-call">Replace</span> <span class="kw-ident">'x'</span> with <span class="kw-num">0.0</span>.
+<span class="kw-call">Replace</span> value at <span class="kw-ident">'result'</span> with <span class="kw-num">2.1</span>. <span class="kw-cmt">/* pointer assignment */</span></code></pre>
+  </section>
+
+  <!-- ── 16. CONDITIONALS ── -->
+  <section class="section">
+    <p class="section-number">§ 16</p>
+    <h2>Conditionals</h2>
+    <pre><code><span class="kw-ctrl">If</span> <span class="kw-ident">'x'</span> <span class="kw-op">is equal to</span> <span class="kw-num">0</span>:
+
+    <span class="kw-call">Replace</span> <span class="kw-ident">'y'</span> with <span class="kw-num">0.0</span>.
+
+<span class="kw-ctrl">Otherwise</span>:
+
+    <span class="kw-call">Replace</span> <span class="kw-ident">'y'</span> with <span class="kw-num">-1.0</span>.
+
+<span class="kw-ctrl">End if</span> <span class="kw-ident">'x'</span> <span class="kw-op">is equal to</span> <span class="kw-num">0</span>.</code></pre>
+  </section>
+
+  <!-- ── 17. COMPARISON OPERATORS ── -->
+  <section class="section">
+    <p class="section-number">§ 17</p>
+    <h2>Comparison Operators</h2>
+    <table>
+      <thead><tr><th>C</th><th>Veritas</th></tr></thead>
+      <tbody>
+        <tr><td>==</td><td>is equal to</td></tr>
+        <tr><td>&gt;</td><td>is greater than</td></tr>
+        <tr><td>&lt;</td><td>is less than</td></tr>
+        <tr><td>&gt;=</td><td>is greater than or equal to</td></tr>
+        <tr><td>&lt;=</td><td>is less than or equal to</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ── 18. LOOPS ── -->
+  <section class="section">
+    <p class="section-number">§ 18</p>
+    <h2>Loops</h2>
+    <table>
+      <thead><tr><th>Condition</th><th>Syntax</th></tr></thead>
+      <tbody>
+        <tr><td>i &lt;= N</td><td>from A <strong>through</strong> B</td></tr>
+        <tr><td>i &lt; N</td><td>from A <strong>to</strong> B</td></tr>
+      </tbody>
+    </table>
+    <pre><code><span class="kw-ctrl">For every iteration</span> of <span class="kw-ident">'i'</span> from <span class="kw-num">0</span> through <span class="kw-num">4</span>:
+
+    <span class="kw-cmt">/* body */</span>
+
+<span class="kw-ctrl">End iteration</span> of <span class="kw-ident">'i'</span> from <span class="kw-num">0</span> through <span class="kw-num">4</span>.</code></pre>
+  </section>
+
+  <!-- ── 19. ARRAY INDEXING ── -->
+  <section class="section">
+    <p class="section-number">§ 19</p>
+    <h2>Array Indexing</h2>
+    <pre><code>an element of <span class="kw-ident">'values'</span> at index <span class="kw-ident">'i'</span></code></pre>
+  </section>
+
+  <!-- ── 20 & 21. ARITHMETIC ── -->
+  <section class="section">
+    <p class="section-number">§ 20 – 21</p>
+    <h2>Arithmetic Operators</h2>
+    <table>
+      <thead><tr><th>Operation</th><th>Syntax</th></tr></thead>
+      <tbody>
+        <tr><td>+</td><td>plus</td></tr>
+        <tr><td>-</td><td>minus</td></tr>
+        <tr><td>*</td><td>multiply by</td></tr>
+        <tr><td>/</td><td>divide by</td></tr>
+      </tbody>
+    </table>
+    <div class="callout">
+      <strong>Restriction:</strong> addition/subtraction cannot appear in the same expression as multiplication/division. Calculations must be separated into multiple statements.
+    </div>
+  </section>
+
+  <!-- ── 22. EXPONENTIATION ── -->
+  <section class="section">
+    <p class="section-number">§ 22</p>
+    <h2>Exponentiation</h2>
+    <p>Exponentiation is not a built-in operator. Use <code>pow</code> from <code>math.h</code>.</p>
+    <pre><code><span class="kw-call">Call</span> <span class="kw-ident">'pow'</span> with <span class="kw-ident">'x'</span> and <span class="kw-num">2</span>, stored to <span class="kw-ident">'y'</span>.</code></pre>
+  </section>
+
+  <!-- ── 23. ENGLISH LIST RULES ── -->
+  <section class="section">
+    <p class="section-number">§ 23</p>
+    <h2>English List Rules</h2>
+    <table>
+      <thead><tr><th>Items</th><th>Form</th></tr></thead>
+      <tbody>
+        <tr><td>2</td><td>A and B</td></tr>
+        <tr><td>3+</td><td>A, B, and C</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ── 24. RESERVED KEYWORDS ── -->
+  <section class="section">
+    <p class="section-number">§ 24</p>
+    <h2>Reserved Keywords</h2>
+    <p>The following words are reserved and cannot be used as identifiers.</p>
+    <div class="keyword-grid">
+      <span class="kpill">This</span><span class="kpill">program</span>
+      <span class="kpill">Include</span><span class="kpill">library</span>
+      <span class="kpill">Create</span><span class="kpill">Define</span>
+      <span class="kpill">function</span><span class="kpill">with</span>
+      <span class="kpill">as</span><span class="kpill">returning</span>
+      <span class="kpill">Call</span><span class="kpill">stored</span>
+      <span class="kpill">If</span><span class="kpill">Otherwise</span>
+      <span class="kpill">End</span><span class="kpill">For</span>
+      <span class="kpill">iteration</span><span class="kpill">from</span>
+      <span class="kpill">through</span><span class="kpill">value</span>
+      <span class="kpill">address</span><span class="kpill">element</span>
+      <span class="kpill">index</span><span class="kpill">Replace</span>
+      <span class="kpill">and</span>
+    </div>
+  </section>
+
+  <!-- ── 25. FORMATTING ── -->
+  <section class="section">
+    <p class="section-number">§ 25</p>
+    <h2>Formatting Guidelines</h2>
+    <p>Indentation is recommended for readability but not strictly required. Nested structures such as loops and conditionals should be indented.</p>
+  </section>
+
+  <!-- ── 26. PROGRAM STRUCTURE ── -->
+  <section class="section">
+    <p class="section-number">§ 26</p>
+    <h2>Program Structure</h2>
+    <p>A Veritas program has two logical sections. <strong>Definitions</strong> (<code>Include</code>, <code>Create</code>, <code>Define</code>) are placed at the top level. All other statements are <strong>execution statements</strong> and are automatically placed inside <code>main</code> when translated to C.</p>
+
+    <div class="code-pair">
+      <div>
+        <p class="code-pair-label ver">Veritas</p>
+        <pre><code><span class="kw-decl">Include</span> the library <span class="kw-ident">'stdio.h'</span>.
+
+<span class="kw-decl">Create</span> <span class="kw-ident">'x'</span> <span class="kw-type">as an integer</span>.
+
+<span class="kw-decl">Define</span> the function <span class="kw-ident">'printHello'</span>
+with <span class="kw-ident">'value'</span> <span class="kw-type">as an integer</span>
+returning <span class="kw-type">nothing</span>.
+
+    <span class="kw-call">Call</span> <span class="kw-ident">'printf'</span> with
+    <span class="kw-str">"Value = %d\n"</span>
+    and <span class="kw-ident">'value'</span>,
+    stored to nothing.
+
+<span class="kw-ctrl">End function</span> <span class="kw-ident">'printHello'</span>.
+
+<span class="kw-call">Call</span> <span class="kw-ident">'printHello'</span> with <span class="kw-num">5</span>,
+stored to nothing.</code></pre>
+      </div>
+      <div>
+        <p class="code-pair-label c">Generated C</p>
+        <pre class="c-block"><code>#include &lt;stdio.h&gt;
+
+int x;
+
+void printHello(int value)
+{
+    printf("Value = %d\n", value);
+}
+
+int main(void)
+{
+    printHello(5);
+}</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span>REGULA VERITATIS</span>
+    <span>The Rule of Truth — <span>v1.0</span></span>
+  </footer>
+
+</div>
+</body>
+</html>

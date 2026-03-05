@@ -1,0 +1,25 @@
+{
+  "name": "veritas-language",
+  "displayName": "Veritas",
+  "description": "Syntax highlighting for the Veritas programming language (.ver)",
+  "version": "0.0.1",
+  "engines": { "vscode": "^1.70.0" },
+  "categories": ["Programming Languages"],
+  "contributes": {
+    "languages": [{
+      "id": "veritas",
+      "aliases": ["Veritas", "veritas"],
+      "extensions": [".ver"],
+      "icon": {
+        "light": "./icons/veritas.svg",
+        "dark":  "./icons/veritas.svg"
+      },
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+      "language": "veritas",
+      "scopeName": "source.veritas",
+      "path": "./syntaxes/veritas.tmLanguage.json"
+    }]
+  }
+}

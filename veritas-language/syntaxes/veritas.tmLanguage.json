@@ -1,0 +1,67 @@
+{
+  "name": "Veritas",
+  "scopeName": "source.veritas",
+  "fileTypes": ["ver"],
+  "patterns": [
+    { "include": "#comment" },
+    { "include": "#string" },
+    { "include": "#identifier" },
+    { "include": "#number" },
+    { "include": "#keyword" },
+    { "include": "#type" },
+    { "include": "#operator" },
+    { "include": "#punctuation" }
+  ],
+  "repository": {
+    "comment": {
+      "name": "comment.block.veritas",
+      "begin": "/\\*",
+      "end": "\\*/",
+      "beginCaptures": { "0": { "name": "punctuation.definition.comment.veritas" } },
+      "endCaptures":   { "0": { "name": "punctuation.definition.comment.veritas" } }
+    },
+    "string": {
+      "name": "string.quoted.double.veritas",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [{
+        "name": "constant.character.escape.veritas",
+        "match": "\\\\[nrtf\\\\\"']"
+      }]
+    },
+    "identifier": {
+      "name": "variable.other.veritas",
+      "match": "'[A-Za-z_][A-Za-z0-9_]*'"
+    },
+    "number": {
+      "name": "constant.numeric.veritas",
+      "match": "-?\\b[0-9]+(?:\\.[0-9]+)?\\b"
+    },
+    "keyword": {
+      "patterns": [
+        {
+          "comment": "Statement-opening keywords (LL1 starters)",
+          "name": "keyword.control.veritas",
+          "match": "\\b(If|Otherwise|End\\s+if|For\\s+every\\s+iteration|End\\s+iteration|Define\\s+the\\s+function|End\\s+function|End\\s+of\\s+the\\s+program|This\\s+is\\s+the\\s+program)\\b"
+        },
+        {
+          "comment": "Declaration and action keywords",
+          "name": "keyword.other.veritas",
+          "match": "\\b(Include|Create|Replace|Call|returning|with|stored\\s+to|the\\s+address\\s+of|value\\s+at|an\\s+element\\s+of|at\\s+index|with\\s+values?|from|through|to|nothing|and|the|library|header|program|function|iteration|of|as|an?|size)\\b"
+        }
+      ]
+    },
+    "type": {
+      "name": "storage.type.veritas",
+      "match": "\\b(integer|float|double|char|pointer|array)\\b"
+    },
+    "operator": {
+      "name": "keyword.operator.veritas",
+      "match": "\\b(plus|minus|multiply\\s+by|divide\\s+by|is\\s+equal\\s+to|is\\s+greater\\s+than\\s+or\\s+equal\\s+to|is\\s+less\\s+than\\s+or\\s+equal\\s+to|is\\s+greater\\s+than|is\\s+less\\s+than)\\b"
+    },
+    "punctuation": {
+      "name": "punctuation.terminator.veritas",
+      "match": "\\."
+    }
+  }
+}
