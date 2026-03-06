@@ -1,67 +1,43 @@
 This is the program 'example'.
-
 Include the library 'stdio.h'.
 Include the library 'math.h'.
-
 Define the function 'safeSqrt'
 with 'x' as a float
 and 'result' as a float pointer
 returning nothing.
-
     If 'x' is equal to 0:
-
         Replace value at 'result' with 0.0.
-
     Otherwise:
-
         If 'x' is greater than 0.0:
-
             Call 'sqrt' with 'x',
             stored to value at 'result'.
-
         Otherwise:
-
             Replace value at 'result' with -1.0.
-
         End if 'x' is greater than 0.0.
-
     End if 'x' is equal to 0.
-
 End function 'safeSqrt'.
-
-Create 'values' as a float array of size 5 */
 Create 'values' as a float array of size 5 with values:
 4.0,
 9.0,
 0.0,
 -5.0,
 and 16.0.
-
 Create 'result' as a float.
-
 For every iteration of 'i' from 0 through 4:
-
     Call 'safeSqrt' with
     an element of 'values' at index 'i'
     and the address of 'result',
     stored to nothing.
-
     If 'result' is equal to -1.0:
-
         Call 'printf' with
         "Invalid input\n",
         stored to nothing.
-
     Otherwise:
-
         Call 'printf' with
         "sqrt(%f) = %f\n",
         an element of 'values' at index 'i',
-        'result',
+        and 'result',
         stored to nothing.
-
     End if 'result' is equal to -1.0.
-
 End iteration of 'i' from 0 through 4.
-
 End of the program 'example'.

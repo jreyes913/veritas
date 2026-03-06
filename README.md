@@ -1,8 +1,20 @@
-# Veritas
+# Veritas (v1.1.0)
 
 > *A programming language designed to resemble clear, structured human English while remaining deterministic and easy to parse.*
 
-Veritas compiles `.ver` source files to C via a Python transpiler. Programs read like well-structured English instructions — every statement follows strict grammatical rules that map unambiguously to C output.
+Veritas compiles `.ver` source files to C via a Python transpiler (`vcparser.py`). Programs read like well-structured English instructions — every statement follows strict grammatical rules that map unambiguously to C output.
+
+Version 1.1.0 introduces significant improvements to the type system and expression parsing, including multi-word C types, pointer syntax, and complex arithmetic through quantity grouping.
+
+---
+
+## Key Features
+
+- **Natural Syntax**: Statements like `Create 'x' as an integer with value 10.`
+- **Direct C Interop**: Use any C type directly (e.g., `double complex`, `uint32_t`).
+- **Pointer Support**: First-class support for addresses and pointer dereferencing.
+- **Quantity Expressions**: Nested grouping with `the quantity` allows for complex mathematical formulas.
+- **English Articles**: Use `a` or `an` naturally; the compiler handles the stripping.
 
 ---
 

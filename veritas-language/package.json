@@ -2,7 +2,11 @@
   "name": "veritas-language",
   "displayName": "Veritas",
   "description": "Syntax highlighting for the Veritas programming language (.ver)",
-  "version": "0.0.1",
+  "version": "1.1.0",
+  "main": "./extension.js",
+  "activationEvents": [
+    "onLanguage:veritas"
+  ],
   "engines": { "vscode": "^1.70.0" },
   "categories": ["Programming Languages"],
   "contributes": {
@@ -20,6 +24,10 @@
       "language": "veritas",
       "scopeName": "source.veritas",
       "path": "./syntaxes/veritas.tmLanguage.json"
+    }],
+    "snippets": [{
+      "language": "veritas",
+      "path": "./snippets/veritas.json"
     }]
   }
 }

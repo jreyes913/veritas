@@ -1,0 +1,76 @@
+{
+  "Program Skeleton": {
+    "prefix": "program",
+    "body": [
+      "This is the program '${1:name}'.",
+      "",
+      "${0}",
+      "",
+      "End of the program '${1:name}'."
+    ],
+    "description": "Create a new Veritas program"
+  },
+  "Function Definition": {
+    "prefix": "define",
+    "body": [
+      "Define the function '${1:funcName}'",
+      "with '${2:param}' as a ${3:type}",
+      "returning ${4:nothing}.",
+      "",
+      "    ${0}",
+      "",
+      "End function '${1:funcName}'."
+    ],
+    "description": "Define a new function"
+  },
+  "For Loop": {
+    "prefix": "for",
+    "body": [
+      "For every iteration of '${1:i}' from ${2:0} through ${3:N}:",
+      "    ${0}",
+      "End iteration of '${1:i}' from ${2:0} through ${3:N}."
+    ],
+    "description": "For loop iteration"
+  },
+  "If Else Block": {
+    "prefix": "if",
+    "body": [
+      "If ${1:condition}:",
+      "    ${2:/* then */}",
+      "Otherwise:",
+      "    ${3:/* else */}",
+      "End if ${1:condition}."
+    ],
+    "description": "If/Else conditional block"
+  },
+  "Create Scalar": {
+    "prefix": "create",
+    "body": [
+      "Create '${1:var}' as a ${2:type} with value ${3:0}."
+    ],
+    "description": "Create a scalar variable"
+  },
+  "Create Array": {
+    "prefix": "array",
+    "body": [
+      "Create '${1:arr}' as a ${2:type} array of size ${3:5} with values:",
+      "${4:1},",
+      "and ${5:5}."
+    ],
+    "description": "Create an array with values"
+  },
+  "Call with stored to": {
+    "prefix": "call",
+    "body": [
+      "Call '${1:func}' with ${2:args}, stored to ${3:nothing}."
+    ],
+    "description": "Call a function and store result"
+  },
+  "Replace with quantity": {
+    "prefix": "replace",
+    "body": [
+      "Replace '${1:var}' with the quantity ${2:expr}."
+    ],
+    "description": "Replace variable with a quantity expression"
+  }
+}

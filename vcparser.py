@@ -1,20 +1,31 @@
 """
-vcparser.py — Veritas to C compiler  (vcparser, v2)
+vcparser.py — Veritas to C compiler  (vcparser, v3)
 
 Pipeline:  .ver source  →  logical statements  →  AST  →  C output
 
-Changes from veritasc.py
-─────────────────────────
-1. strip_terminal_period  — fixed float-period ambiguity (regex anchored match).
-2. translate_expression   — single-operator restriction is now explicit and
-                            emits a diagnostic comment for chained operators.
-3. AST scaffolding        — every statement builds a typed dict node instead of
-                            emitting C directly; a separate codegen pass walks
-                            the AST.  Marked with  # [AST]  throughout.
-4. _STARTERS              — unchanged; every leading keyword is unique, which
-                            preserves the LL(1) property of the grammar.
-5. General cleanup        — self.includes / .globals / .functions / .main_body
-                            are preserved on the Compiler for external access.
+Changes from v2
+───────────────
+1.  strip_terminal_period  — fixed float-period ambiguity (regex anchored).
+2.  map_type               — removed _TYPE_MAP; C types pass through directly
+                             after stripping the English article ('a'/'an').
+                             Article mismatch emits a warning; output unaffected.
+                             'nothing' remains the sole reserved keyword → 'void'.
+3.  AST scaffolding        — every statement builds a typed dict node; a separate
+                             codegen pass walks the AST.  Marked # [AST].
+4.  quantity expressions   — 'the quantity <expr>' → parenthesised C group.
+                             Semicolons chain groups with unrestricted outer ops.
+                             _translate_simple / _translate_inner extracted to
+                             break the Mode 1 recursion cycle entirely.
+                             allow_chained=True permits multi-op inner expressions
+                             (e.g. '2 multiplied by x plus 3' → '2 * x + 3').
+5.  pointer rendering      — 'type*' renders as 'type *name' in param lists.
+6.  _begin_function        — param regex now accepts comma separators and
+                             multi-word types (e.g. 'double complex pointer').
+7.  _handle_create         — array base-type regex widened to [\w ]+? so
+                             multi-word types like 'double complex' are captured.
+8.  _begin_for             — start/end values passed through translate_value so
+                             quoted variable names like 'N' strip their quotes.
+9.  _STARTERS              — unchanged; LL(1) property preserved throughout.
 """
 
 from __future__ import annotations
@@ -28,23 +39,21 @@ from typing import Any, Optional
 # 1.  PRE-PROCESSING
 # ===========================================================================
 
-# LL(1) starter keywords — each one uniquely identifies the statement type.
-# Adding a new statement kind requires adding exactly one new entry here.
 _STARTERS = re.compile(
     r'^\s*('
-    r'This is the program'   r'|'   # program declaration
-    r'End of the program'    r'|'   # program terminator
-    r'Include the'           r'|'   # library / header inclusion
-    r'Define the function'   r'|'   # function definition header
-    r'End function'          r'|'   # function definition footer
-    r'Create '               r'|'   # variable / array declaration
-    r'For every iteration'   r'|'   # for-loop header
-    r'End iteration'         r'|'   # for-loop footer
-    r'If '                   r'|'   # conditional branch
-    r'Otherwise'             r'|'   # else branch
-    r'End if'                r'|'   # conditional footer
-    r'Replace '              r'|'   # assignment
-    r'Call '                        # function call
+    r'This is the program'   r'|'
+    r'End of the program'    r'|'
+    r'Include the'           r'|'
+    r'Define the function'   r'|'
+    r'End function'          r'|'
+    r'Create '               r'|'
+    r'For every iteration'   r'|'
+    r'End iteration'         r'|'
+    r'If '                   r'|'
+    r'Otherwise'             r'|'
+    r'End if'                r'|'
+    r'Replace '              r'|'
+    r'Call '
     r')'
 )
 
@@ -55,17 +64,7 @@ def strip_comments(src: str) -> str:
 
 
 def logical_lines(src: str) -> list[str]:
-    """
-    Group physical lines into logical statements.
-
-    A new statement begins on any line that matches _STARTERS (LL(1) dispatch).
-    Lines that do not match a starter are treated as continuations of the
-    previous statement and joined with a single space.
-
-    This is the correct level at which to enforce LL(1): each starter keyword
-    is unique, so the parser never needs to look further than the first token
-    of a line to know which rule to apply.
-    """
+    """Group physical lines into logical statements using LL(1) starters."""
     physical = [ln.strip() for ln in src.splitlines() if ln.strip()]
     logical: list[str] = []
     current: list[str] = []
@@ -84,57 +83,11 @@ def logical_lines(src: str) -> list[str]:
     return logical
 
 
-# ---------------------------------------------------------------------------
-# FIX 1 — strip_terminal_period
-# ---------------------------------------------------------------------------
-
-# A sentence-final period is one that:
-#   • sits at the very end of the string (after optional whitespace), AND
-#   • is NOT preceded by a digit followed by another digit
-#     (that would be the fractional part of a float, e.g. "16.0.")
-#
-# The regex uses a negative lookbehind to exclude  digit '.' digit  patterns.
-# Example:  "Replace 'x' with 3."   → stripped  (non-numeric before '.')
-#           "Replace 'x' with 3.0." → stripped  ('0' before '.', but '0'
-#             is a digit, so we check: is the char two positions back also a
-#             digit followed by this digit?  Yes → do NOT strip the inner dot,
-#             but DO strip the outermost trailing '.' because the char
-#             immediately before it is '0' and the char before that is '.',
-#             not a digit-dot pair.)
-#
-# Simpler, correct rule used here:
-#   Strip the trailing '.' only when it is preceded by a non-alphanumeric /
-#   non-underscore character OR when it is preceded by a closing quote.
-#   Floats like "3.0" end with a digit — so "3.0." has a digit before the
-#   final '.'; we must still strip that final '.' (it IS the sentence period).
-#   BUT we must NOT strip a '.' that is the decimal point inside "3." if
-#   "3." appears mid-string (handled by not touching mid-string dots at all).
-#
-# The correct invariant: after logical_lines() joins a statement, the ONLY
-# trailing '.' is always the Veritas sentence terminator.  We strip exactly
-# that one, regardless of what precedes it.
-
 _TRAILING_PERIOD = re.compile(r'\.\s*$')
 
 
 def strip_terminal_period(s: str) -> str:
-    """
-    Remove the sentence-final period from a Veritas statement.
-
-    Uses a regex anchored to end-of-string so it removes exactly one '.'
-    at the trailing position (after optional whitespace) — never a '.'
-    embedded inside a float or file-extension token.
-
-    Before (broken):  if s.endswith('.'): s = s[:-1]
-    After  (correct): _TRAILING_PERIOD.sub('', s)
-
-    The difference matters when the statement itself ends with a float,
-    e.g. "Replace 'x' with 3."  The old code would strip the period and
-    leave "Replace 'x' with 3" — identical result.  But if a future Veritas
-    extension allowed bare floats as top-level expressions the ambiguity
-    would silently corrupt output.  The regex makes the intent explicit and
-    is trivially extensible.
-    """
+    """Remove the sentence-final period. Anchored so float dots are safe."""
     return _TRAILING_PERIOD.sub('', s).rstrip()
 
 
@@ -142,28 +95,32 @@ def strip_terminal_period(s: str) -> str:
 # 2.  TYPE MAPPING
 # ===========================================================================
 
-_TYPE_MAP: dict[str, str] = {
-    'integer': 'int',
-    'float':   'float',
-    'double':  'double',
-    'char':    'char',
-    'nothing': 'void',
-}
-
-
 def map_type(t: str) -> str:
-    """Translate a Veritas type string to its C equivalent."""
+    """
+    Strip the Veritas article ('a'/'an') and pass the C type through directly.
+    'nothing' is the only reserved keyword and maps to 'void'.
+    Warns if the wrong article is used; output is unaffected either way.
+    """
     t = t.strip()
+    if t == 'nothing':
+        return 'void'
+    m = re.match(r'^(an?)\s+(.+)', t, re.IGNORECASE)
+    if m:
+        article, ctype = m.group(1).lower(), m.group(2)
+        if ctype[0].lower() in 'aeiou' and article != 'an':
+            print(f"Warning: '{ctype}' starts with a vowel, expected 'an'")
+        elif ctype[0].lower() not in 'aeiou' and article != 'a':
+            print(f"Warning: '{ctype}' starts with a consonant, expected 'a'")
+        t = ctype
     if t.endswith(' pointer'):
         return map_type(t[:-len(' pointer')].strip()) + '*'
-    return _TYPE_MAP.get(t, t)
+    return t
 
 
 # ===========================================================================
 # 3.  OPERATOR TABLES
 # ===========================================================================
 
-# Longest-match first for comparison operators (critical for '>=' vs '>').
 COMPARE_OPS: list[tuple[str, str]] = [
     ('is greater than or equal to', '>='),
     ('is less than or equal to',    '<='),
@@ -173,13 +130,12 @@ COMPARE_OPS: list[tuple[str, str]] = [
 ]
 
 ARITH_OPS: list[tuple[str, str]] = [
-    ('plus',        '+'),
-    ('minus',       '-'),
-    ('multiply by', '*'),
-    ('divide by',   '/'),
+    ('multiplied by', '*'),
+    ('divided by',    '/'),
+    ('plus',          '+'),
+    ('minus',         '-'),
 ]
 
-# Flat set of all arithmetic keyword strings, used for chained-op detection.
 _ARITH_KEYWORDS: set[str] = {kw for kw, _ in ARITH_OPS}
 
 
@@ -188,16 +144,7 @@ _ARITH_KEYWORDS: set[str] = {kw for kw, _ in ARITH_OPS}
 # ===========================================================================
 
 def translate_value(token: str) -> str:
-    """
-    Translate a single Veritas value token to its C representation.
-
-    Handles:
-      'name'                           → name
-      an element of 'arr' at index 'i' → arr[i]
-      value at 'ptr'                   → *ptr
-      the address of 'var'             → &var
-      numeric / string literals        → pass-through
-    """
+    """Translate a single Veritas value token to its C representation."""
     token = token.strip()
 
     m = re.match(r"an element of '(\w+)' at index '(\w+)'", token)
@@ -215,19 +162,16 @@ def translate_value(token: str) -> str:
     if token.startswith("'") and token.endswith("'") and len(token) > 2:
         return token[1:-1]
 
-    return token   # numeric literal, string literal, or bare keyword
+    return token
 
 
 def split_on_keyword(text: str, keyword: str) -> Optional[tuple[str, str]]:
     """
-    Find the first occurrence of `keyword` as a whole-word match OUTSIDE
-    of any single- or double-quoted region, and split the text into
-    (before, after).  Returns None if not found.
+    Find the first whole-word occurrence of keyword outside quoted regions
+    and return (before, after).  Returns None if not found.
     """
-    # Blank out quoted regions so keyword search ignores their contents.
     blanked = re.sub(r'"[^"]*"', lambda m: ' ' * len(m.group()), text)
     blanked = re.sub(r"'[^']*'", lambda m: ' ' * len(m.group()), blanked)
-
     m = re.search(r'\b' + re.escape(keyword) + r'\b', blanked)
     if m:
         return text[:m.start()].strip(), text[m.end():].strip()
@@ -235,10 +179,7 @@ def split_on_keyword(text: str, keyword: str) -> Optional[tuple[str, str]]:
 
 
 def _count_arith_ops(expr: str) -> int:
-    """
-    Count how many distinct arithmetic operator keywords appear in `expr`
-    (outside of quoted regions).  Used to detect illegal chained expressions.
-    """
+    """Count distinct arithmetic operator keywords outside quoted regions."""
     blanked = re.sub(r'"[^"]*"', lambda m: ' ' * len(m.group()), expr)
     blanked = re.sub(r"'[^']*'", lambda m: ' ' * len(m.group()), blanked)
     return sum(
@@ -248,46 +189,160 @@ def _count_arith_ops(expr: str) -> int:
 
 
 # ---------------------------------------------------------------------------
-# FIX 2 — translate_expression (safe single-operator restriction)
+# QUANTITY EXPRESSION PARSER
 # ---------------------------------------------------------------------------
 
-def translate_expression(expr: str) -> str:
+def _split_quantity_clauses(expr: str) -> list[str]:
+    """Split a semicolon-separated quantity chain into individual clauses."""
+    return [c.strip() for c in expr.split(';') if c.strip()]
+
+
+def _parse_quantity_clause(clause: str) -> tuple[Optional[str], str]:
     """
-    Translate an arithmetic expression to C.
+    Strip a leading arithmetic operator keyword from a clause.
+    Returns (c_operator, remainder) or (None, clause) if no leading op.
+    """
+    for vop, cop in ARITH_OPS:
+        pattern = re.compile(r'^' + re.escape(vop) + r'\s+', re.IGNORECASE)
+        m = pattern.match(clause)
+        if m:
+            return cop, clause[m.end():].strip()
+    return None, clause
 
-    Veritas restricts expressions to a SINGLE operator tier (spec §21).
-    This function enforces that restriction explicitly:
 
-      • If exactly one arithmetic operator is found → translate normally.
-      • If more than one distinct operator keyword is found → emit a
-        diagnostic comment instead of silently producing wrong C.
-        (e.g. "a plus b minus c" is illegal and must be split by the author.)
-      • If no operator is found → treat as a bare value.
+def _translate_simple(expr: str, allow_chained: bool = False) -> str:
+    """
+    Translate an arithmetic expression containing no quantity clauses.
 
-    The 'stops after first operator' behaviour is achieved by the order of
-    matching in ARITH_OPS: we scan left-to-right and return as soon as the
-    first operator keyword is found, never attempting to parse the RHS
-    further.  This means  'x plus 5 plus 3'  would match 'plus' and hand
-    '5 plus 3' to translate_value(), which returns it verbatim — a visible
-    artefact, not silent corruption.  The explicit count check below catches
-    this case and emits a clear comment instead.
+    allow_chained=False (default, Mode 2 / bare expressions):
+        Enforces single-operator restriction; emits a diagnostic comment
+        if more than one operator keyword is present.
+
+    allow_chained=True (inside a quantity group):
+        Parses left-to-right so '2 multiplied by x plus 3' → '2 * x + 3'.
+        Finds the rightmost operator and recurses on the left operand,
+        giving standard left-associative evaluation order.
     """
     expr = expr.strip()
 
+    if allow_chained:
+        blanked = re.sub(r'"[^"]*"', lambda m: ' ' * len(m.group()), expr)
+        blanked = re.sub(r"'[^']*'", lambda m: ' ' * len(m.group()), blanked)
+        # Blank out nested 'the quantity ...' spans so their internal
+        # operators are invisible to the rightmost-op search.  A nested
+        # quantity is everything from 'the quantity' to end-of-string
+        # (it is always the final token in a well-formed RHS).
+        blanked = re.sub(r'\bthe quantity\b.*$', lambda m: ' ' * len(m.group()),
+                         blanked, flags=re.IGNORECASE)
+
+        best_pos: Optional[int] = None
+        best_vop: Optional[str] = None
+        best_cop: Optional[str] = None
+
+        for vop, cop in ARITH_OPS:
+            for hit in re.finditer(r'\b' + re.escape(vop) + r'\b', blanked):
+                if best_pos is None or hit.start() > best_pos:
+                    best_pos = hit.start()
+                    best_vop = vop
+                    best_cop = cop
+
+        if best_vop is not None and best_pos is not None:
+            # Split at the exact position of the rightmost operator,
+            # not the first occurrence, to get correct left-associativity.
+            lhs = expr[:best_pos].strip()
+            rhs = expr[best_pos + len(best_vop):].strip()
+            return (
+                f'{_translate_simple(lhs, allow_chained=True)}'
+                f' {best_cop} '
+                f'{_translate_inner(rhs)}'
+            )
+        return translate_value(expr)
+
+    # allow_chained=False — original single-operator restriction
     op_count = _count_arith_ops(expr)
-
     if op_count > 1:
-        # Spec §21: mixed/chained operators are not allowed.
-        # Emit a diagnostic comment so the programmer sees the problem.
-        return f'/* ERROR: chained arithmetic not allowed — split into multiple statements: {expr} */ 0'
-
+        return (
+            f'/* ERROR: chained arithmetic not allowed — '
+            f'split into multiple statements: {expr} */ 0'
+        )
     for vop, cop in ARITH_OPS:
         parts = split_on_keyword(expr, vop)
         if parts:
             lhs, rhs = parts
             return f'{translate_value(lhs)} {cop} {translate_value(rhs)}'
-
     return translate_value(expr)
+
+
+def _translate_inner(expr: str) -> str:
+    """
+    Translate a value that may itself be 'the quantity ...' or a bare token.
+    Used as the RHS handler in _translate_simple so nested quantity groups
+    are parenthesised correctly instead of passed verbatim to translate_value.
+    """
+    expr = expr.strip()
+    m = re.match(r'^the quantity\s+(.+)$', expr, re.IGNORECASE)
+    if m:
+        inner = _translate_simple(m.group(1).strip(), allow_chained=True)
+        return f'({inner})'
+    return translate_value(expr)
+
+
+def _translate_quantity(expr: str) -> str:
+    """
+    Translate 'the quantity <inner>' → '(<inner_c>)'.
+
+    Uses _translate_simple(allow_chained=True) so inner expressions like
+    '2 multiplied by x plus 3' produce '2 * x + 3' without error.
+    Never calls translate_expression — no Mode 1 re-entry, no recursion.
+    """
+    m = re.match(r'^the quantity\s+(.+)$', expr, re.IGNORECASE)
+    if m:
+        inner = _translate_simple(m.group(1).strip(), allow_chained=True)
+        return f'({inner})'
+    return _translate_simple(expr, allow_chained=True)
+
+
+def translate_expression(expr: str) -> str:
+    """
+    Translate an arithmetic expression to C.
+
+    Mode 1 — quantity-chained:
+      Triggered by 'the quantity' keyword or semicolons.
+      Each semicolon-delimited clause becomes a parenthesised C group.
+      Call graph: translate_expression → _translate_quantity
+                                       → _translate_simple  (no cycle)
+
+    Mode 2 — single-operator:
+      Original behaviour. Enforces one-operator restriction.
+      Delegates to _translate_simple(allow_chained=False).
+    """
+    expr = expr.strip()
+
+    if ';' in expr or re.search(r'\bthe quantity\b', expr, re.IGNORECASE):
+        clauses = _split_quantity_clauses(expr)
+
+        if len(clauses) == 1:
+            _, core = _parse_quantity_clause(clauses[0])
+            return _translate_quantity(core)
+
+        parts: list[str] = []
+        for i, clause in enumerate(clauses):
+            op, core = _parse_quantity_clause(clause)
+            c_group = _translate_quantity(core)
+            if i == 0:
+                parts.append(c_group)
+            else:
+                if op is None:
+                    parts.append(
+                        f'/* ERROR: missing operator before clause '
+                        f'{i + 1}: {clause} */ {c_group}'
+                    )
+                else:
+                    parts.append(f' {op} {c_group}')
+
+        return ''.join(parts)
+
+    return _translate_simple(expr)
 
 
 def translate_condition(cond: str) -> str:
@@ -304,13 +359,12 @@ def translate_condition(cond: str) -> str:
 # 5.  ARGUMENT LIST PARSING
 # ===========================================================================
 
-# Multi-word Veritas value prefixes whose internal spaces must survive splits.
 _PROTECTED_PHRASES: list[str] = [
     'an element of',
     'the address of',
     'value at',
 ]
-_NULL = '\x00'   # temporary placeholder for internal spaces
+_NULL = '\x00'
 
 
 def _protect(s: str) -> str:
@@ -325,30 +379,18 @@ def _unprotect(s: str) -> str:
 
 def parse_argument_list(raw: str) -> list[str]:
     """
-    Parse a comma / 'and' -separated Veritas argument list.
-
-    English grammar rules (spec §23):
-      Two items:        A and B
-      Three or more:    A, B, and C
-
-    Multi-word tokens like 'an element of ...' are protected before
-    splitting so their internal spaces do not cause false splits.
-
-    Returns a list of raw (untranslated) argument strings.
+    Parse a comma / 'and'-separated Veritas argument list.
+    Handles two-item 'A and B' and three-or-more 'A, B, and C' forms.
     """
     raw_p = _protect(raw)
-
-    # Primary split on commas.
     parts = [p.strip() for p in raw_p.split(',')]
     result: list[str] = []
     for part in parts:
-        # Strip the leading 'and' that English grammar puts before the last item.
         part = re.sub(r'^and\s+', '', part, flags=re.IGNORECASE).strip()
         part = _unprotect(part).strip()
         if part:
             result.append(part)
 
-    # Two-item list joined only by ' and ' with no commas.
     if len(result) == 1 and result[0]:
         and_parts = re.split(r'\band\b', _protect(raw), maxsplit=1)
         if len(and_parts) == 2:
@@ -363,41 +405,6 @@ def parse_argument_list(raw: str) -> list[str]:
 # ===========================================================================
 # 6.  AST NODE TYPES                                                  # [AST]
 # ===========================================================================
-#
-# Every parsed statement becomes a typed dict (an "AST node").  The 'kind'
-# key identifies the node type; remaining keys are node-specific fields.
-#
-# This is intentionally lightweight — dicts rather than dataclasses — so
-# the structure can be inspected, serialised, or transformed before codegen.
-# A future pass could walk ast['body'] and rewrite nodes (e.g., constant
-# folding, type checking) without touching the parser or the C emitter.
-#
-# Node catalogue:
-#
-#   { kind: 'program',    name: str }
-#   { kind: 'include',    path: str }
-#   { kind: 'declare',    ctype: str, name: str, init: str|None,
-#                         is_array: bool, size: int|None }
-#   { kind: 'func_def',   name: str, params: [(ctype,name)],
-#                         ret_type: str, body: [node] }
-#   { kind: 'for',        var: str, start: str, end: str,
-#                         inclusive: bool, body: [node] }
-#   { kind: 'if',         condition: str,
-#                         then_body: [node], else_body: [node] }
-#   { kind: 'assign',     target: str, value: str }
-#   { kind: 'call',       func: str, args: [str], dest: str|None }
-#   { kind: 'error',      message: str, raw: str }
-#
-# The top-level AST produced by Parser.parse() is:
-#
-#   {
-#       kind:      'module',
-#       name:       str,
-#       includes:  [include_node, ...],
-#       globals:   [declare_node, ...],
-#       functions: [func_def_node, ...],
-#       main:      [node, ...],          ← execution statements
-#   }
 
 ASTNode = dict[str, Any]
 
@@ -407,19 +414,9 @@ ASTNode = dict[str, Any]
 # ===========================================================================
 
 class Parser:
-    """
-    Converts a sequence of logical Veritas statements into an AST.
-
-    The parser maintains a scope stack so that nested constructs (if/else,
-    for-loops, function bodies) accumulate their child nodes in the right
-    place.  When a block-close keyword is encountered the top scope is
-    popped and attached to its parent node.
-
-    All AST building happens here.  No C is emitted by this class.
-    """
+    """Converts logical Veritas statements into a module AST."""
 
     def __init__(self) -> None:
-        # [AST] Top-level module node — populated incrementally.
         self._module: ASTNode = {
             'kind':      'module',
             'name':      '',
@@ -428,121 +425,84 @@ class Parser:
             'functions': [],
             'main':      [],
         }
-
-        # [AST] Scope stack.  Each entry is a list that collects child nodes
-        # for the current block.  The bottom of the stack is either
-        # self._module['main'] or a function body.
         self._scope_stack: list[list[ASTNode]] = [self._module['main']]
-
-        # [AST] Block-header stack.  Parallels _scope_stack for blocks that
-        # need post-hoc attachment (if/else, for).
         self._block_stack: list[ASTNode] = []
-
         self._in_function: bool = False
         self._current_func: Optional[ASTNode] = None
 
-    # -----------------------------------------------------------------------
-    # Public interface
-    # -----------------------------------------------------------------------
-
     def feed(self, stmt: str) -> None:
-        """Process one logical statement and extend the AST."""
         s = strip_terminal_period(stmt.strip())
         self._dispatch(s)
 
     def ast(self) -> ASTNode:
-        """Return the completed module AST."""
-        return self._module  # [AST]
-
-    # -----------------------------------------------------------------------
-    # Dispatch  (LL(1): first keyword uniquely identifies the rule)
-    # -----------------------------------------------------------------------
+        return self._module
 
     def _dispatch(self, s: str) -> None:
-        # --- Program markers ---
         m = re.match(r"This is the program '(\w+)'", s)
         if m:
-            self._module['name'] = m.group(1)   # [AST]
+            self._module['name'] = m.group(1)
             return
 
         if re.match(r"End of the program '(\w+)'", s):
-            return   # nothing to record in AST
-
-        # --- Include ---
-        m = re.match(r"Include the (?:library|header) '([^']+)'", s)
-        if m:
-            node: ASTNode = {'kind': 'include', 'path': m.group(1)}  # [AST]
-            self._module['includes'].append(node)
             return
 
-        # --- Define function ---
+        m = re.match(r"Include the (?:library|header) '([^']+)'", s)
+        if m:
+            self._module['includes'].append({'kind': 'include', 'path': m.group(1)})
+            return
+
         m = re.match(r"Define the function '(\w+)'(.*)", s, re.DOTALL)
         if m:
             self._begin_function(m.group(1), m.group(2))
             return
 
-        # --- End function ---
         m = re.match(r"End function '(\w+)'", s)
         if m:
             self._end_function(m.group(1))
             return
 
-        # --- Create ---
         if s.startswith('Create '):
             self._handle_create(s)
             return
 
-        # --- For loop ---
         m = re.match(r"For every iteration of '(\w+)' from (\S+) (through|to) (\S+)", s)
         if m:
             self._begin_for(m)
             return
 
-        # --- End iteration ---
         m = re.match(r"End iteration of '(\w+)' from (\S+) (through|to) (\S+)", s)
         if m:
             self._end_for()
             return
 
-        # --- If ---
         m = re.match(r"If (.+?):\s*$", s)
         if m:
             self._begin_if(m.group(1))
             return
 
-        # --- Otherwise ---
         if re.match(r"Otherwise\s*:?\s*$", s):
             self._switch_else()
             return
 
-        # --- End if ---
         if re.match(r"End if .+", s):
             self._end_if()
             return
 
-        # --- Replace (assignment) ---
         m = re.match(r"Replace (.+?) with (.+)$", s)
         if m:
-            node = {                                                  # [AST]
+            self._current_scope().append({
                 'kind':   'assign',
                 'target': translate_value(m.group(1)),
                 'value':  translate_expression(m.group(2)),
-            }
-            self._current_scope().append(node)
+            })
             return
 
-        # --- Call ---
         if s.startswith('Call '):
             self._handle_call(s)
             return
 
-        # --- Unknown ---
-        node = {'kind': 'error', 'message': 'unrecognised statement', 'raw': s}  # [AST]
-        self._current_scope().append(node)
-
-    # -----------------------------------------------------------------------
-    # Scope helpers                                                    # [AST]
-    # -----------------------------------------------------------------------
+        self._current_scope().append(
+            {'kind': 'error', 'message': 'unrecognised statement', 'raw': s})
 
     def _current_scope(self) -> list[ASTNode]:
         return self._scope_stack[-1]
@@ -553,10 +513,6 @@ class Parser:
     def _pop_scope(self) -> list[ASTNode]:
         return self._scope_stack.pop()
 
-    # -----------------------------------------------------------------------
-    # Function definition
-    # -----------------------------------------------------------------------
-
     def _begin_function(self, name: str, rest: str) -> None:
         ret_type = 'void'
         ret_m = re.search(r'\breturning\s+(.+?)$', rest)
@@ -566,37 +522,31 @@ class Parser:
 
         params: list[tuple[str, str]] = []
         for pm in re.finditer(
-                r"'(\w+)'\s+as\s+an?\s+([a-z ]+?)(?=\s+and\s+'|\s*$)", rest):
+                r"'(\w+)'\s+as\s+an?\s+([\w][\w ]*?)(?=\s*,|\s+and\s+'|\s*$)", rest):
             params.append((map_type(pm.group(2).strip()), pm.group(1)))
 
-        func_node: ASTNode = {                                        # [AST]
+        self._current_func = {
             'kind':     'func_def',
             'name':     name,
             'params':   params,
             'ret_type': ret_type,
             'body':     [],
         }
-        self._current_func = func_node
         self._in_function = True
-        self._push_scope(func_node['body'])  # [AST] function body becomes current scope
+        self._push_scope(self._current_func['body'])
 
     def _end_function(self, name: str) -> None:
         self._pop_scope()
         assert self._current_func is not None
-        self._module['functions'].append(self._current_func)          # [AST]
+        self._module['functions'].append(self._current_func)
         self._current_func = None
         self._in_function = False
-
-    # -----------------------------------------------------------------------
-    # Variable / array creation
-    # -----------------------------------------------------------------------
 
     def _handle_create(self, s: str) -> None:
         node: Optional[ASTNode] = None
 
-        # Array with initialiser
         m = re.match(
-            r"Create '(\w+)' as an?\s+(\w+) array of size (\d+) with values:(.+)$",
+            r"Create '(\w+)' as an?\s+([\w ]+?) array of size (\d+) with values:(.+)$",
             s, re.DOTALL)
         if m:
             name, base, size, vals_raw = m.groups()
@@ -604,107 +554,66 @@ class Parser:
                 re.sub(r'^and\s+', '', v.strip(), flags=re.IGNORECASE).strip()
                 for v in vals_raw.split(',') if v.strip()
             ]
-            node = {                                                   # [AST]
-                'kind':     'declare',
-                'ctype':    map_type(base),
-                'name':     name,
-                'is_array': True,
-                'size':     int(size),
-                'init':     vals,
-            }
+            node = {'kind': 'declare', 'ctype': map_type(base), 'name': name,
+                    'is_array': True, 'size': int(size), 'init': vals}
 
-        # Array without initialiser
         if node is None:
-            m = re.match(r"Create '(\w+)' as an?\s+(\w+) array of size (\d+)", s)
+            m = re.match(r"Create '(\w+)' as an?\s+([\w ]+?) array of size (\d+)", s)
             if m:
-                node = {                                               # [AST]
-                    'kind':     'declare',
-                    'ctype':    map_type(m.group(2)),
-                    'name':     m.group(1),
-                    'is_array': True,
-                    'size':     int(m.group(3)),
-                    'init':     None,
-                }
+                node = {'kind': 'declare', 'ctype': map_type(m.group(2)),
+                        'name': m.group(1), 'is_array': True,
+                        'size': int(m.group(3)), 'init': None}
 
-        # Scalar with initial value
         if node is None:
             m = re.match(r"Create '(\w+)' as an?\s+(.+?) with value (.+)$", s)
             if m:
-                node = {                                               # [AST]
-                    'kind':     'declare',
-                    'ctype':    map_type(m.group(2).strip()),
-                    'name':     m.group(1),
-                    'is_array': False,
-                    'size':     None,
-                    'init':     m.group(3).strip(),
-                }
+                node = {'kind': 'declare', 'ctype': map_type(m.group(2).strip()),
+                        'name': m.group(1), 'is_array': False, 'size': None,
+                        'init': translate_expression(m.group(3).strip())}
 
-        # Scalar without initial value
         if node is None:
             m = re.match(r"Create '(\w+)' as an?\s+(.+)$", s)
             if m:
-                node = {                                               # [AST]
-                    'kind':     'declare',
-                    'ctype':    map_type(m.group(2).strip()),
-                    'name':     m.group(1),
-                    'is_array': False,
-                    'size':     None,
-                    'init':     None,
-                }
+                node = {'kind': 'declare', 'ctype': map_type(m.group(2).strip()),
+                        'name': m.group(1), 'is_array': False,
+                        'size': None, 'init': None}
 
         if node is None:
             self._current_scope().append(
                 {'kind': 'error', 'message': 'malformed Create', 'raw': s})
             return
 
-        # [AST] Declaration placement: globals vs. local scope
         if self._in_function:
             self._current_scope().append(node)
         else:
             self._module['globals'].append(node)
 
-    # -----------------------------------------------------------------------
-    # For loop
-    # -----------------------------------------------------------------------
-
     def _begin_for(self, m: re.Match) -> None:
-        var      = m.group(1)
-        start    = m.group(2)
-        op_kw    = m.group(3)
-        end      = m.group(4).rstrip(':')
-        for_node: ASTNode = {                                         # [AST]
-            'kind':      'for',
-            'var':       var,
-            'start':     start,
-            'end':       end,
-            'inclusive': op_kw == 'through',
-            'body':      [],
+        for_node: ASTNode = {
+            'kind': 'for', 'var': m.group(1),
+            'start': translate_value(m.group(2)),
+            'end':   translate_value(m.group(4).rstrip(':')),
+            'inclusive': m.group(3) == 'through', 'body': [],
         }
         self._current_scope().append(for_node)
         self._block_stack.append(for_node)
-        self._push_scope(for_node['body'])  # [AST] loop body becomes current scope
+        self._push_scope(for_node['body'])
 
     def _end_for(self) -> None:
         self._pop_scope()
         self._block_stack.pop()
 
-    # -----------------------------------------------------------------------
-    # Conditional
-    # -----------------------------------------------------------------------
-
     def _begin_if(self, condition_raw: str) -> None:
-        if_node: ASTNode = {                                          # [AST]
-            'kind':      'if',
+        if_node: ASTNode = {
+            'kind': 'if',
             'condition': translate_condition(condition_raw),
-            'then_body': [],
-            'else_body': [],
+            'then_body': [], 'else_body': [],
         }
         self._current_scope().append(if_node)
         self._block_stack.append(if_node)
-        self._push_scope(if_node['then_body'])  # [AST] then-branch is current scope
+        self._push_scope(if_node['then_body'])
 
     def _switch_else(self) -> None:
-        # [AST] Pop then-branch, push else-branch for the same if node.
         self._pop_scope()
         if_node = self._block_stack[-1]
         assert if_node['kind'] == 'if', "Otherwise without If"
@@ -713,10 +622,6 @@ class Parser:
     def _end_if(self) -> None:
         self._pop_scope()
         self._block_stack.pop()
-
-    # -----------------------------------------------------------------------
-    # Function call
-    # -----------------------------------------------------------------------
 
     def _handle_call(self, s: str) -> None:
         m = re.match(
@@ -737,13 +642,9 @@ class Parser:
         )
         dest = None if dest_raw == 'nothing' else translate_value(dest_raw)
 
-        node: ASTNode = {                                             # [AST]
-            'kind': 'call',
-            'func': func_name,
-            'args': c_args,
-            'dest': dest,
-        }
-        self._current_scope().append(node)
+        self._current_scope().append({
+            'kind': 'call', 'func': func_name, 'args': c_args, 'dest': dest,
+        })
 
 
 # ===========================================================================
@@ -751,61 +652,40 @@ class Parser:
 # ===========================================================================
 
 class CodeGen:
-    """
-    Walks the module AST and produces C source code.
-
-    Keeping this class separate from Parser means:
-      • The AST can be inspected / transformed before codegen.
-      • A different backend (e.g., LLVM IR, Python) can be swapped in by
-        subclassing or replacing CodeGen entirely.
-      • The public lists (includes, globals, functions, main_body) are
-        still populated as before for external consumers.
-    """
+    """Walks the module AST and produces C source code."""
 
     def __init__(self) -> None:
-        # Preserve the original public interface expected by callers.
         self.includes:  list[str] = []
         self.globals:   list[str] = []
         self.functions: list[str] = []
         self.main_body: list[str] = []
 
-    def generate(self, module: ASTNode) -> str:                      # [AST]
-        """Entry point: walk the module AST and return a C source string."""
+    def generate(self, module: ASTNode) -> str:
         self._gen_includes(module['includes'])
         self._gen_globals(module['globals'])
         self._gen_functions(module['functions'])
         self._gen_main(module['main'])
         return self._render()
 
-    # -----------------------------------------------------------------------
-    # Section generators
-    # -----------------------------------------------------------------------
-
-    def _gen_includes(self, nodes: list[ASTNode]) -> None:           # [AST]
+    def _gen_includes(self, nodes: list[ASTNode]) -> None:
         for node in nodes:
             self.includes.append(f'#include <{node["path"]}>')
 
-    def _gen_globals(self, nodes: list[ASTNode]) -> None:            # [AST]
+    def _gen_globals(self, nodes: list[ASTNode]) -> None:
         for node in nodes:
             self.globals.append(self._decl_c(node))
 
-    def _gen_functions(self, nodes: list[ASTNode]) -> None:          # [AST]
+    def _gen_functions(self, nodes: list[ASTNode]) -> None:
         for func in nodes:
-            lines = self._func_c(func)
-            self.functions.append('\n'.join(lines))
+            self.functions.append('\n'.join(self._func_c(func)))
 
-    def _gen_main(self, nodes: list[ASTNode]) -> None:               # [AST]
+    def _gen_main(self, nodes: list[ASTNode]) -> None:
         for node in nodes:
             for line in self._node_c(node, indent=1):
                 self.main_body.append(line)
 
-    # -----------------------------------------------------------------------
-    # Node → C lines
-    # -----------------------------------------------------------------------
-
-    def _node_c(self, node: ASTNode, indent: int) -> list[str]:      # [AST]
-        """Recursively convert an AST node to a list of indented C lines."""
-        pad = '    ' * indent
+    def _node_c(self, node: ASTNode, indent: int) -> list[str]:
+        pad  = '    ' * indent
         kind = node['kind']
 
         if kind == 'declare':
@@ -850,7 +730,6 @@ class CodeGen:
         return [f'{pad}/* UNKNOWN NODE KIND: {kind} */']
 
     def _decl_c(self, node: ASTNode) -> str:
-        """Render a declare node as a C declaration string (no indent)."""
         ctype = node['ctype']
         name  = node['name']
         if node['is_array']:
@@ -863,23 +742,21 @@ class CodeGen:
             return f'{ctype} {name} = {node["init"]};'
         return f'{ctype} {name};'
 
-    def _func_c(self, func: ASTNode) -> list[str]:                   # [AST]
-        """Render a func_def node as a list of C lines."""
+    def _func_c(self, func: ASTNode) -> list[str]:
+        def _render_param(ctype: str, name: str) -> str:
+            stars = len(ctype) - len(ctype.rstrip('*'))
+            if stars:
+                return f'{ctype.rstrip("*")} {"*" * stars}{name}'
+            return f'{ctype} {name}'
+
         param_str = ', '.join(
-            f'{ctype} {pname}' for ctype, pname in func['params']
+            _render_param(ctype, pname) for ctype, pname in func['params']
         ) or 'void'
-        lines = [
-            f'{func["ret_type"]} {func["name"]}({param_str})',
-            '{',
-        ]
+        lines = [f'{func["ret_type"]} {func["name"]}({param_str})', '{']
         for child in func['body']:
             lines.extend(self._node_c(child, indent=1))
         lines.append('}')
         return lines
-
-    # -----------------------------------------------------------------------
-    # Final render
-    # -----------------------------------------------------------------------
 
     def _render(self) -> str:
         parts: list[str] = []
@@ -900,25 +777,13 @@ class CodeGen:
 # ===========================================================================
 
 def compile_veritas(source: str) -> str:
-    """
-    Full pipeline:  Veritas source  →  C source
-
-      1. Strip comments
-      2. Split into logical statements  (LL(1) starter-keyword grouping)
-      3. Parse each statement into AST nodes          [AST stage]
-      4. Walk AST and emit C                          [codegen stage]
-    """
+    """Full pipeline: Veritas source → C source."""
     src = strip_comments(source)
-
-    # --- Stage 1: parse → AST ---                                    # [AST]
     parser = Parser()
     for stmt in logical_lines(src):
         parser.feed(stmt)
-    module_ast = parser.ast()
-
-    # --- Stage 2: AST → C ---                                        # [AST]
     gen = CodeGen()
-    return gen.generate(module_ast)
+    return gen.generate(parser.ast())
 
 
 # ===========================================================================

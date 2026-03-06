@@ -47,17 +47,17 @@
         {
           "comment": "Declaration and action keywords",
           "name": "keyword.other.veritas",
-          "match": "\\b(Include|Create|Replace|Call|returning|with|stored\\s+to|the\\s+address\\s+of|value\\s+at|an\\s+element\\s+of|at\\s+index|with\\s+values?|from|through|to|nothing|and|the|library|header|program|function|iteration|of|as|an?|size)\\b"
+          "match": "\\b(Include|Create|Replace|Call|returning|with\\s+value|with\\s+values|with|stored\\s+to|the\\s+address\\s+of|value\\s+at|an\\s+element\\s+of|at\\s+index|array\\s+of\\s+size|from|through|to|and|the|library|header|program|function|iteration|of|as|an?|size|the\\s+quantity)\\b"
         }
       ]
     },
     "type": {
       "name": "storage.type.veritas",
-      "match": "\\b(integer|float|double|char|pointer|array)\\b"
+      "match": "\\b(integer|float|double|char|pointer|array|nothing)\\b"
     },
     "operator": {
       "name": "keyword.operator.veritas",
-      "match": "\\b(plus|minus|multiply\\s+by|divide\\s+by|is\\s+equal\\s+to|is\\s+greater\\s+than\\s+or\\s+equal\\s+to|is\\s+less\\s+than\\s+or\\s+equal\\s+to|is\\s+greater\\s+than|is\\s+less\\s+than)\\b"
+      "match": "\\b(plus|minus|multiplied\\s+by|divided\\s+by|is\\s+equal\\s+to|is\\s+greater\\s+than\\s+or\\s+equal\\s+to|is\\s+less\\s+than\\s+or\\s+equal\\s+to|is\\s+greater\\s+than|is\\s+less\\s+than)\\b"
     },
     "punctuation": {
       "name": "punctuation.terminator.veritas",

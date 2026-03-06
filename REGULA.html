@@ -502,10 +502,16 @@
   <!-- ── 9. VARIABLE CREATION ── -->
   <section class="section">
     <p class="section-number">§ 09</p>
-    <h2>Variable Creation</h2>
+    <h2>Variable Creation &amp; Type System</h2>
+    <p>Veritas handles typing by stripping the English article (<code>a</code> or <code>an</code>) and passing the remainder directly to C. Multi-word types (like <code>double complex</code>) and pointers are supported.</p>
     <pre><code><span class="kw-decl">Create</span> <span class="kw-ident">'result'</span> <span class="kw-type">as a float</span>.
 <span class="kw-decl">Create</span> <span class="kw-ident">'count'</span> <span class="kw-type">as an integer</span> with value <span class="kw-num">1</span>.
-<span class="kw-decl">Create</span> <span class="kw-ident">'letter'</span> <span class="kw-type">as a char</span>.</code></pre>
+<span class="kw-decl">Create</span> <span class="kw-ident">'ptr'</span> <span class="kw-type">as a double pointer</span>.
+<span class="kw-decl">Create</span> <span class="kw-ident">'z'</span> <span class="kw-type">as a double complex</span>.</code></pre>
+
+    <div class="callout">
+      <strong>Rule of Article:</strong> <code>nothing</code> maps to <code>void</code>. Pointers append <code>pointer</code> to the type name.
+    </div>
   </section>
 
   <!-- ── 10. ARRAY CREATION ── -->
@@ -543,12 +549,19 @@ returning <span class="kw-type">nothing</span>.
 <span class="kw-call">Call</span> <span class="kw-ident">'printf'</span> with <span class="kw-str">"Hello\n"</span>, stored to nothing.</code></pre>
   </section>
 
-  <!-- ── 13 & 14. ADDRESS / POINTER ── -->
+  <!-- ── 13 & 14. POINTERS & ADDRESSES ── -->
   <section class="section">
     <p class="section-number">§ 13 – 14</p>
-    <h2>Address &amp; Pointer Access</h2>
+    <h2>Pointers &amp; Address Access</h2>
+    <table>
+      <thead><tr><th>C</th><th>Veritas Syntax</th></tr></thead>
+      <tbody>
+        <tr><td>&amp;var</td><td>the address of <strong>'var'</strong></td></tr>
+        <tr><td>*ptr</td><td>value at <strong>'ptr'</strong></td></tr>
+      </tbody>
+    </table>
     <pre><code><span class="kw-call">Call</span> <span class="kw-ident">'safeSqrt'</span> with <span class="kw-ident">'x'</span> and the address of <span class="kw-ident">'result'</span>, stored to nothing.
-<span class="kw-call">Replace</span> value at <span class="kw-ident">'result'</span> with <span class="kw-num">0.0</span>.</code></pre>
+<span class="kw-call">Replace</span> value at <span class="kw-ident">'ptr'</span> with <span class="kw-num">0.0</span>.</code></pre>
   </section>
 
   <!-- ── 15. ASSIGNMENT ── -->
@@ -624,13 +637,18 @@ returning <span class="kw-type">nothing</span>.
       <tbody>
         <tr><td>+</td><td>plus</td></tr>
         <tr><td>-</td><td>minus</td></tr>
-        <tr><td>*</td><td>multiply by</td></tr>
-        <tr><td>/</td><td>divide by</td></tr>
+        <tr><td>*</td><td>multiplied by</td></tr>
+        <tr><td>/</td><td>divided by</td></tr>
       </tbody>
     </table>
-    <div class="callout">
-      <strong>Restriction:</strong> addition/subtraction cannot appear in the same expression as multiplication/division. Calculations must be separated into multiple statements.
-    </div>
+
+    <p>Arithmetic follows standard precedence rules. For complex formulas, use <strong>the quantity</strong> to group operations.</p>
+    <pre><code><span class="kw-call">Replace</span> <span class="kw-ident">'x'</span> with <span class="kw-num">2</span> <span class="kw-op">multiplied by</span> <span class="kw-ident">the quantity</span> <span class="kw-num">3</span> <span class="kw-op">plus</span> <span class="kw-num">4</span>.
+<span class="kw-cmt">/* Translated to: x = 2 * (3 + 4); */</span></code></pre>
+
+    <p>Compound expressions can be chained with <strong>semicolons</strong> for grouping multiple parenthetical operations at once.</p>
+    <pre><code><span class="kw-call">Replace</span> <span class="kw-ident">'result'</span> with <span class="kw-ident">the quantity</span> <span class="kw-ident">'a'</span> <span class="kw-op">plus</span> <span class="kw-num">1</span>; <span class="kw-op">divided by</span> <span class="kw-ident">the quantity</span> <span class="kw-ident">'b'</span> <span class="kw-op">minus</span> <span class="kw-num">1</span>.
+<span class="kw-cmt">/* Translated to: result = (a + 1) / (b - 1); */</span></code></pre>
   </section>
 
   <!-- ── 22. EXPONENTIATION ── -->
@@ -731,7 +749,7 @@ int main(void)
 
   <footer>
     <span>REGULA VERITATIS</span>
-    <span>The Rule of Truth — <span>v1.0</span></span>
+    <span>The Rule of Truth — <span>v1.1.0</span></span>
   </footer>
 
 </div>
