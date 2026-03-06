@@ -21,16 +21,29 @@ const hoverData = {
 };
 
 function activate(context) {
+    const hoverEntries = Object.entries(hoverData)
+        .sort((a, b) => b[0].length - a[0].length);
+
     let hoverProvider = vscode.languages.registerHoverProvider('veritas', {
         provideHover(document, position, token) {
             const line = document.lineAt(position.line).text;
-            for (const keyword in hoverData) {
-                if (line.includes(keyword)) {
-                    // Simple check for if the cursor is near the keyword could be added here
-                    // for now, we provide the hover if the keyword is on the line.
-                    return new vscode.Hover(hoverData[keyword]);
+            const cursor = position.character;
+
+            for (const [keyword, helpText] of hoverEntries) {
+                const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const pattern = new RegExp(`\\b${escaped}\\b`, 'g');
+                let match;
+                while ((match = pattern.exec(line)) !== null) {
+                    const start = match.index;
+                    const end = start + keyword.length;
+                    if (cursor >= start && cursor <= end) {
+                        const range = new vscode.Range(position.line, start, position.line, end);
+                        return new vscode.Hover(helpText, range);
+                    }
                 }
             }
+
+            return undefined;
         }
     });
 

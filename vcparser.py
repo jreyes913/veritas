@@ -35,6 +35,11 @@ import sys
 from typing import Any, Optional
 
 
+def warn(msg: str) -> None:
+    """Emit a compiler warning to stderr (never to generated C stdout)."""
+    print(f'Warning: {msg}', file=sys.stderr)
+
+
 # ===========================================================================
 # 1.  PRE-PROCESSING
 # ===========================================================================
@@ -108,9 +113,9 @@ def map_type(t: str) -> str:
     if m:
         article, ctype = m.group(1).lower(), m.group(2)
         if ctype[0].lower() in 'aeiou' and article != 'an':
-            print(f"Warning: '{ctype}' starts with a vowel, expected 'an'")
+            warn(f"'{ctype}' starts with a vowel, expected 'an'")
         elif ctype[0].lower() not in 'aeiou' and article != 'a':
-            print(f"Warning: '{ctype}' starts with a consonant, expected 'a'")
+            warn(f"'{ctype}' starts with a consonant, expected 'a'")
         t = ctype
     if t.endswith(' pointer'):
         return map_type(t[:-len(' pointer')].strip()) + '*'
@@ -429,13 +434,40 @@ class Parser:
         self._block_stack: list[ASTNode] = []
         self._in_function: bool = False
         self._current_func: Optional[ASTNode] = None
+        self._main_scope: list[ASTNode] = self._module['main']
 
     def feed(self, stmt: str) -> None:
         s = strip_terminal_period(stmt.strip())
         self._dispatch(s)
 
     def ast(self) -> ASTNode:
+        self._finalize()
         return self._module
+
+    def _emit_error(self, message: str, raw: str) -> None:
+        self._main_scope.append({'kind': 'error', 'message': message, 'raw': raw})
+
+    def _finalize(self) -> None:
+        while len(self._scope_stack) > 1:
+            self._pop_scope()
+
+        if self._current_func is not None:
+            self._emit_error(
+                f"unclosed function '{self._current_func['name']}'",
+                f"Define the function '{self._current_func['name']}'",
+            )
+            self._current_func = None
+            self._in_function = False
+
+        while self._block_stack:
+            block = self._block_stack.pop()
+            if block['kind'] == 'for':
+                self._emit_error(
+                    "unclosed iteration block",
+                    f"For every iteration of '{block['var']}'",
+                )
+            elif block['kind'] == 'if':
+                self._emit_error('unclosed if block', f"If {block['condition']}")
 
     def _dispatch(self, s: str) -> None:
         m = re.match(r"This is the program '(\w+)'", s)
@@ -536,8 +568,21 @@ class Parser:
         self._push_scope(self._current_func['body'])
 
     def _end_function(self, name: str) -> None:
-        self._pop_scope()
-        assert self._current_func is not None
+        if self._current_func is None or not self._in_function:
+            self._emit_error('End function without active function', f"End function '{name}'")
+            return
+
+        if self._current_func['name'] != name:
+            self._emit_error(
+                (
+                    f"mismatched function end: expected End function "
+                    f"'{self._current_func['name']}'"
+                ),
+                f"End function '{name}'",
+            )
+
+        if len(self._scope_stack) > 1:
+            self._pop_scope()
         self._module['functions'].append(self._current_func)
         self._current_func = None
         self._in_function = False
@@ -600,7 +645,18 @@ class Parser:
         self._push_scope(for_node['body'])
 
     def _end_for(self) -> None:
-        self._pop_scope()
+        if not self._block_stack:
+            self._emit_error('End iteration without active loop', 'End iteration')
+            return
+        node = self._block_stack[-1]
+        if node['kind'] != 'for':
+            self._emit_error(
+                'End iteration encountered, but active block is not a loop',
+                'End iteration',
+            )
+            return
+        if len(self._scope_stack) > 1:
+            self._pop_scope()
         self._block_stack.pop()
 
     def _begin_if(self, condition_raw: str) -> None:
@@ -614,13 +670,30 @@ class Parser:
         self._push_scope(if_node['then_body'])
 
     def _switch_else(self) -> None:
-        self._pop_scope()
+        if not self._block_stack:
+            self._emit_error('Otherwise without active If block', 'Otherwise')
+            return
         if_node = self._block_stack[-1]
-        assert if_node['kind'] == 'if', "Otherwise without If"
+        if if_node['kind'] != 'if':
+            self._emit_error(
+                'Otherwise encountered, but active block is not If',
+                'Otherwise',
+            )
+            return
+        if len(self._scope_stack) > 1:
+            self._pop_scope()
         self._push_scope(if_node['else_body'])
 
     def _end_if(self) -> None:
-        self._pop_scope()
+        if not self._block_stack:
+            self._emit_error('End if without active If block', 'End if')
+            return
+        node = self._block_stack[-1]
+        if node['kind'] != 'if':
+            self._emit_error('End if encountered, but active block is not If', 'End if')
+            return
+        if len(self._scope_stack) > 1:
+            self._pop_scope()
         self._block_stack.pop()
 
     def _handle_call(self, s: str) -> None:

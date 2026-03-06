@@ -7,7 +7,14 @@
     { "include": "#string" },
     { "include": "#identifier" },
     { "include": "#number" },
-    { "include": "#statementKeyword" },
+    { "include": "#starterProgram" },
+    { "include": "#starterInclude" },
+    { "include": "#starterFunction" },
+    { "include": "#starterDeclaration" },
+    { "include": "#starterAssignment" },
+    { "include": "#starterCall" },
+    { "include": "#starterIteration" },
+    { "include": "#starterConditional" },
     { "include": "#typeContext" },
     { "include": "#operator" },
     { "include": "#otherKeyword" },
@@ -40,9 +47,73 @@
       "name": "constant.numeric.veritas",
       "match": "-?\\b[0-9]+(?:\\.[0-9]+)?\\b"
     },
-    "statementKeyword": {
-      "name": "keyword.control.veritas",
-      "match": "\\b(This\\s+is\\s+the\\s+program|End\\s+of\\s+the\\s+program|Include\\s+the|Define\\s+the\\s+function|End\\s+function|Create|Replace|Call|For\\s+every\\s+iteration|End\\s+iteration|If|Otherwise|End\\s+if)\\b"
+    "starterProgram": {
+      "patterns": [
+        {
+          "name": "keyword.control.program.start.veritas",
+          "match": "\\bThis\\s+is\\s+the\\s+program\\b"
+        },
+        {
+          "name": "keyword.control.program.end.veritas",
+          "match": "\\bEnd\\s+of\\s+the\\s+program\\b"
+        }
+      ]
+    },
+    "starterInclude": {
+      "name": "keyword.control.include.veritas",
+      "match": "\\bInclude\\s+the\\b"
+    },
+    "starterFunction": {
+      "patterns": [
+        {
+          "name": "keyword.control.function.start.veritas",
+          "match": "\\bDefine\\s+the\\s+function\\b"
+        },
+        {
+          "name": "keyword.control.function.end.veritas",
+          "match": "\\bEnd\\s+function\\b"
+        }
+      ]
+    },
+    "starterDeclaration": {
+      "name": "keyword.control.declaration.veritas",
+      "match": "\\bCreate\\b"
+    },
+    "starterAssignment": {
+      "name": "keyword.control.assignment.veritas",
+      "match": "\\bReplace\\b"
+    },
+    "starterCall": {
+      "name": "keyword.control.call.veritas",
+      "match": "\\bCall\\b"
+    },
+    "starterIteration": {
+      "patterns": [
+        {
+          "name": "keyword.control.loop.start.veritas",
+          "match": "\\bFor\\s+every\\s+iteration\\b"
+        },
+        {
+          "name": "keyword.control.loop.end.veritas",
+          "match": "\\bEnd\\s+iteration\\b"
+        }
+      ]
+    },
+    "starterConditional": {
+      "patterns": [
+        {
+          "name": "keyword.control.conditional.end.veritas",
+          "match": "\\bEnd\\s+if\\b"
+        },
+        {
+          "name": "keyword.control.conditional.else.veritas",
+          "match": "\\bOtherwise\\b"
+        },
+        {
+          "name": "keyword.control.conditional.if.veritas",
+          "match": "\\bIf\\b"
+        }
+      ]
     },
     "typeContext": {
       "patterns": [
