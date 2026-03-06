@@ -109,15 +109,27 @@ The extension maps Veritas tokens to VS Code's theme colors by default. For high
 ```json
 "editor.tokenColorCustomizations": {
     "textMateRules": [
-        { "scope": "keyword.control.veritas",  "settings": { "foreground": "#E63946", "fontStyle": "bold" } },
-        { "scope": "keyword.other.veritas",    "settings": { "foreground": "#FFD93D" } },
-        { "scope": "storage.type.veritas",     "settings": { "foreground": "#2DC653", "fontStyle": "bold" } },
-        { "scope": "keyword.operator.veritas", "settings": { "foreground": "#FF922B", "fontStyle": "bold" } },
-        { "scope": "variable.other.veritas",   "settings": { "foreground": "#74C7EC" } },
-        { "scope": "string.quoted.double.veritas", "settings": { "foreground": "#A8FF78" } },
-        { "scope": "constant.numeric.veritas", "settings": { "foreground": "#C77DFF" } },
-        { "scope": "comment.block.veritas",    "settings": { "foreground": "#4a5e4d", "fontStyle": "italic" } },
-        { "scope": "punctuation.terminator.veritas", "settings": { "foreground": "#E63946", "fontStyle": "bold" } }
+        { "scope": "keyword.control.program.start.veritas", "settings": { "foreground": "#FF4D6D", "fontStyle": "bold" } },
+        { "scope": "keyword.control.program.end.veritas", "settings": { "foreground": "#FF758F", "fontStyle": "bold" } },
+        { "scope": "keyword.control.include.veritas", "settings": { "foreground": "#FFB703", "fontStyle": "bold" } },
+        { "scope": "keyword.control.function.start.veritas", "settings": { "foreground": "#3A86FF", "fontStyle": "bold" } },
+        { "scope": "keyword.control.function.end.veritas", "settings": { "foreground": "#4CC9F0", "fontStyle": "bold" } },
+        { "scope": "keyword.control.declaration.veritas", "settings": { "foreground": "#80ED99", "fontStyle": "bold" } },
+        { "scope": "keyword.control.assignment.veritas", "settings": { "foreground": "#2EC4B6", "fontStyle": "bold" } },
+        { "scope": "keyword.control.call.veritas", "settings": { "foreground": "#06D6A0", "fontStyle": "bold" } },
+        { "scope": "keyword.control.loop.start.veritas", "settings": { "foreground": "#8338EC", "fontStyle": "bold" } },
+        { "scope": "keyword.control.loop.end.veritas", "settings": { "foreground": "#B5179E", "fontStyle": "bold" } },
+        { "scope": "keyword.control.conditional.if.veritas", "settings": { "foreground": "#FB5607", "fontStyle": "bold" } },
+        { "scope": "keyword.control.conditional.else.veritas", "settings": { "foreground": "#FF006E", "fontStyle": "bold" } },
+        { "scope": "keyword.control.conditional.end.veritas", "settings": { "foreground": "#E5383B", "fontStyle": "bold" } },
+        { "scope": "keyword.other.veritas", "settings": { "foreground": "#FFD166" } },
+        { "scope": "storage.type.veritas", "settings": { "foreground": "#00F5D4", "fontStyle": "bold" } },
+        { "scope": "keyword.operator.veritas", "settings": { "foreground": "#FF9F1C", "fontStyle": "bold" } },
+        { "scope": "variable.other.veritas", "settings": { "foreground": "#90E0EF" } },
+        { "scope": "string.quoted.double.veritas", "settings": { "foreground": "#C1FBA4" } },
+        { "scope": "constant.numeric.veritas", "settings": { "foreground": "#C77DFF", "fontStyle": "bold" } },
+        { "scope": "comment.block.veritas", "settings": { "foreground": "#5C677D", "fontStyle": "italic" } },
+        { "scope": "punctuation.terminator.veritas", "settings": { "foreground": "#F94144", "fontStyle": "bold" } }
     ]
 }
 ```
