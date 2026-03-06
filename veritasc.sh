@@ -12,13 +12,34 @@
 set -euo pipefail
 
 if [[ $# -lt 1 ]]; then
-    echo "Usage: $0 <source.ver>" >&2
+    echo "Usage: $0 <source.ver> [--tokens|--ast|--ir|--semantics]" >&2
     exit 1
 fi
 
-filename=$(echo "$1" | sed 's/\.ver$//g')
+source_file="$1"
+shift
+
+debug_flags=()
+for arg in "$@"; do
+    case "$arg" in
+        --tokens|--ast|--ir|--semantics)
+            debug_flags+=("$arg")
+            ;;
+        *)
+            echo "Unknown flag: $arg" >&2
+            exit 1
+            ;;
+    esac
+done
+
+filename=$(echo "$source_file" | sed 's/\.ver$//g')
 
 # --- 1. Transpile .ver → .c ------------------------------------------------
+if [[ ${#debug_flags[@]} -gt 0 ]]; then
+    python3 vcparser.py "${filename}.ver" "${debug_flags[@]}"
+    exit 0
+fi
+
 python3 vcparser.py "${filename}.ver" > "${filename}.c"
 
 # --- 2. Library → linker flag map ------------------------------------------

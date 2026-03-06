@@ -8,6 +8,7 @@ from compiler.backends.c_backend import generate_c
 from compiler.frontend.lexer import format_tokens, tokenize
 from compiler.frontend.parser import Parser
 from compiler.ir.lowering import format_ir, lower_program
+from compiler.semantic import SemanticAnalyzer, format_symbol_table
 
 
 def _fmt_decl(d: dict) -> str:
@@ -75,18 +76,27 @@ def run(source: str, args: argparse.Namespace) -> str:
     tokens = tokenize(source)
     if args.tokens:
         return format_tokens(tokens)
+
     parser = Parser()
     for tok in tokens:
         if tok.kind == 'STATEMENT':
             parser.feed(tok.value)
     ast_program = parser.ast()
+
     if args.ast:
         return format_ast_tree(ast_program)
     if args.format:
         return format_veritas(ast_program)
+
+    analyzer = SemanticAnalyzer()
+    symbol_table = analyzer.analyze(ast_program)
+    if args.semantics:
+        return format_symbol_table(symbol_table)
+
     ir_program = lower_program(ast_program)
     if args.ir:
         return format_ir(ir_program)
+
     return generate_c(ir_program)
 
 
@@ -96,6 +106,7 @@ def main() -> None:
     ap.add_argument('--tokens', action='store_true')
     ap.add_argument('--ast', action='store_true')
     ap.add_argument('--ir', action='store_true')
+    ap.add_argument('--semantics', action='store_true')
     ap.add_argument('--format', action='store_true')
     args = ap.parse_args()
     source = Path(args.source).read_text()
