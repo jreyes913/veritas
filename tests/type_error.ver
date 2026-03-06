@@ -1,0 +1,5 @@
+This is the program 'type_error'.
+Create 'x' as an int with value 2.
+Create 'msg' as a string with value "hello".
+Create 'bad' as an int with value the quantity x plus msg.
+End of the program 'type_error'.
