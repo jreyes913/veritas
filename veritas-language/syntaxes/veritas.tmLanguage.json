@@ -7,9 +7,10 @@
     { "include": "#string" },
     { "include": "#identifier" },
     { "include": "#number" },
-    { "include": "#keyword" },
-    { "include": "#type" },
+    { "include": "#statementKeyword" },
+    { "include": "#typeContext" },
     { "include": "#operator" },
+    { "include": "#otherKeyword" },
     { "include": "#punctuation" }
   ],
   "repository": {
@@ -18,16 +19,18 @@
       "begin": "/\\*",
       "end": "\\*/",
       "beginCaptures": { "0": { "name": "punctuation.definition.comment.veritas" } },
-      "endCaptures":   { "0": { "name": "punctuation.definition.comment.veritas" } }
+      "endCaptures": { "0": { "name": "punctuation.definition.comment.veritas" } }
     },
     "string": {
       "name": "string.quoted.double.veritas",
       "begin": "\"",
       "end": "\"",
-      "patterns": [{
-        "name": "constant.character.escape.veritas",
-        "match": "\\\\[nrtf\\\\\"']"
-      }]
+      "patterns": [
+        {
+          "name": "constant.character.escape.veritas",
+          "match": "\\\\[nrtf\\\\\"']"
+        }
+      ]
     },
     "identifier": {
       "name": "variable.other.veritas",
@@ -37,31 +40,46 @@
       "name": "constant.numeric.veritas",
       "match": "-?\\b[0-9]+(?:\\.[0-9]+)?\\b"
     },
-    "keyword": {
+    "statementKeyword": {
+      "name": "keyword.control.veritas",
+      "match": "\\b(This\\s+is\\s+the\\s+program|End\\s+of\\s+the\\s+program|Include\\s+the|Define\\s+the\\s+function|End\\s+function|Create|Replace|Call|For\\s+every\\s+iteration|End\\s+iteration|If|Otherwise|End\\s+if)\\b"
+    },
+    "typeContext": {
       "patterns": [
         {
-          "comment": "Statement-opening keywords (LL1 starters)",
-          "name": "keyword.control.veritas",
-          "match": "\\b(If|Otherwise|End\\s+if|For\\s+every\\s+iteration|End\\s+iteration|Define\\s+the\\s+function|End\\s+function|End\\s+of\\s+the\\s+program|This\\s+is\\s+the\\s+program)\\b"
+          "name": "storage.type.veritas",
+          "match": "\\bnothing\\b"
         },
         {
-          "comment": "Declaration and action keywords",
-          "name": "keyword.other.veritas",
-          "match": "\\b(Include|Create|Replace|Call|returning|with\\s+value|with\\s+values|with|stored\\s+to|the\\s+address\\s+of|value\\s+at|an\\s+element\\s+of|at\\s+index|array\\s+of\\s+size|from|through|to|and|the|library|header|program|function|iteration|of|as|an?|size|the\\s+quantity)\\b"
+          "begin": "\\b(as|returning)\\s+",
+          "beginCaptures": {
+            "1": { "name": "keyword.other.veritas" }
+          },
+          "end": "(?=\\b(with\\s+value|with\\s+values|with|from|through|to|stored\\s+to|and)\\b|[:.,]|$)",
+          "patterns": [
+            {
+              "name": "keyword.other.veritas",
+              "match": "\\ban?\\b"
+            },
+            {
+              "name": "storage.type.veritas",
+              "match": "\\b[A-Za-z_][A-Za-z0-9_]*\\b"
+            }
+          ]
         }
       ]
     },
-    "type": {
-      "name": "storage.type.veritas",
-      "match": "\\b(integer|float|double|char|pointer|array|nothing)\\b"
-    },
     "operator": {
       "name": "keyword.operator.veritas",
-      "match": "\\b(plus|minus|multiplied\\s+by|divided\\s+by|is\\s+equal\\s+to|is\\s+greater\\s+than\\s+or\\s+equal\\s+to|is\\s+less\\s+than\\s+or\\s+equal\\s+to|is\\s+greater\\s+than|is\\s+less\\s+than)\\b"
+      "match": "\\b(multiplied\\s+by|divided\\s+by|plus|minus|is\\s+greater\\s+than\\s+or\\s+equal\\s+to|is\\s+less\\s+than\\s+or\\s+equal\\s+to|is\\s+greater\\s+than|is\\s+less\\s+than|is\\s+equal\\s+to)\\b"
+    },
+    "otherKeyword": {
+      "name": "keyword.other.veritas",
+      "match": "\\b(library|header|function|program|iteration|of|from|through|to|with|with\\s+value|with\\s+values|stored\\s+to|the\\s+address\\s+of|value\\s+at|an\\s+element\\s+of|at\\s+index|array\\s+of\\s+size|the\\s+quantity|and)\\b"
     },
     "punctuation": {
       "name": "punctuation.terminator.veritas",
-      "match": "\\."
+      "match": "(?<!\\d)\\.(?!\\d)|:|,|;"
     }
   }
 }
