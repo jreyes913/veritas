@@ -71,14 +71,12 @@ Matrix* matrix_load_csv(const char* filepath) {
 
     Matrix* mat = arena_alloc(global_arena, sizeof(Matrix));
     
-    // Simple CSV parser: first line is headers
     char line[4096];
     if (!fgets(line, sizeof(line), fp)) {
         fclose(fp);
         return NULL;
     }
 
-    // Count columns
     int cols = 0;
     char* tmp = strdup(line);
     char* token = strtok(tmp, ",\n");
@@ -100,7 +98,6 @@ Matrix* matrix_load_csv(const char* filepath) {
     }
     free(tmp);
 
-    // Count rows and load data
     int rows = 0;
     long data_start = ftell(fp);
     while (fgets(line, sizeof(line), fp)) {
@@ -111,7 +108,7 @@ Matrix* matrix_load_csv(const char* filepath) {
 
     fseek(fp, data_start, SEEK_SET);
     for (int r = 0; r < rows; r++) {
-        fgets(line, sizeof(line), fp);
+        if (!fgets(line, sizeof(line), fp)) break;
         token = strtok(line, ",\n");
         for (int c = 0; c < cols; c++) {
             mat->data[r * cols + c] = token ? atof(token) : 0.0;
@@ -121,6 +118,30 @@ Matrix* matrix_load_csv(const char* filepath) {
 
     fclose(fp);
     return mat;
+}
+
+void matrix_save_csv(Matrix* mat, const char* filepath) {
+    if (!mat) return;
+    FILE* fp = fopen(filepath, "w");
+    if (!fp) {
+        fprintf(stderr, "Error: Could not open file %s for writing\n", filepath);
+        return;
+    }
+
+    // Write headers
+    for (int i = 0; i < mat->cols; i++) {
+        fprintf(fp, "%s%s", mat->column_names[i], (i == mat->cols - 1) ? "" : ",");
+    }
+    fprintf(fp, "\n");
+
+    // Write data
+    for (int r = 0; r < mat->rows; r++) {
+        for (int c = 0; c < mat->cols; c++) {
+            fprintf(fp, "%.6f%s", mat->data[r * mat->cols + c], (c == mat->cols - 1) ? "" : ",");
+        }
+        fprintf(fp, "\n");
+    }
+    fclose(fp);
 }
 
 Matrix* matrix_load_bin(const char* filepath, int rows, int cols) {
@@ -133,12 +154,27 @@ Matrix* matrix_load_bin(const char* filepath, int rows, int cols) {
     Matrix* mat = arena_alloc(global_arena, sizeof(Matrix));
     mat->rows = rows;
     mat->cols = cols;
-    mat->column_names = NULL;
+    mat->column_names = arena_alloc(global_arena, cols * sizeof(char*));
+    for(int i=0; i<cols; i++) {
+        mat->column_names[i] = arena_alloc(global_arena, 16);
+        sprintf(mat->column_names[i], "col_%d", i);
+    }
     mat->data = arena_alloc(global_arena, rows * cols * sizeof(double));
 
     fread(mat->data, sizeof(double), rows * cols, fp);
     fclose(fp);
     return mat;
+}
+
+void matrix_save_bin(Matrix* mat, const char* filepath) {
+    if (!mat) return;
+    FILE* fp = fopen(filepath, "wb");
+    if (!fp) {
+        fprintf(stderr, "Error: Could not open file %s for writing\n", filepath);
+        return;
+    }
+    fwrite(mat->data, sizeof(double), mat->rows * mat->cols, fp);
+    fclose(fp);
 }
 
 double* matrix_get_column(Matrix* mat, const char* col_name) {
@@ -168,8 +204,48 @@ double* matrix_get_column_idx(Matrix* mat, int col_idx) {
     return vec;
 }
 
+void matrix_set_column(Matrix* mat, const char* col_name, double* vec) {
+    if (!mat || !vec) return;
+    int col_idx = -1;
+    for (int i = 0; i < mat->cols; i++) {
+        if (strcmp(mat->column_names[i], col_name) == 0) {
+            col_idx = i;
+            break;
+        }
+    }
+    
+    if (col_idx == -1) {
+        // Add new column
+        int old_cols = mat->cols;
+        int new_cols = old_cols + 1;
+        double* new_data = arena_alloc(global_arena, mat->rows * new_cols * sizeof(double));
+        char** new_names = arena_alloc(global_arena, new_cols * sizeof(char*));
+        
+        for (int r = 0; r < mat->rows; r++) {
+            for (int c = 0; c < old_cols; c++) {
+                new_data[r * new_cols + c] = mat->data[r * old_cols + c];
+            }
+            new_data[r * new_cols + old_cols] = vec[r];
+        }
+        
+        for (int i = 0; i < old_cols; i++) new_names[i] = mat->column_names[i];
+        new_names[old_cols] = arena_alloc(global_arena, strlen(col_name) + 1);
+        strcpy(new_names[old_cols], col_name);
+        
+        mat->data = new_data;
+        mat->column_names = new_names;
+        mat->cols = new_cols;
+    } else {
+        // Overwrite existing column
+        for (int i = 0; i < mat->rows; i++) {
+            mat->data[i * mat->cols + col_idx] = vec[i];
+        }
+    }
+}
+
 /* Statistics */
 double mean(double* data, int n) {
+    if (n <= 0) return 0.0;
     double sum = 0;
     for (int i = 0; i < n; i++) sum += data[i];
     return sum / n;

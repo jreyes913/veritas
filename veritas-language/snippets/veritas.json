@@ -80,6 +80,20 @@
     ],
     "description": "Create a matrix with column names"
   },
+  "Load Matrix": {
+    "prefix": "load",
+    "body": [
+      "Load '${1:mat}' from \"${2:data.csv}\" as matrix."
+    ],
+    "description": "Load a matrix from CSV"
+  },
+  "Save Matrix": {
+    "prefix": "save",
+    "body": [
+      "Save '${1:mat}' to \"${2:updated.csv}\" as matrix."
+    ],
+    "description": "Save a matrix to CSV"
+  },
   "Call with stored to": {
     "prefix": "call",
     "body": [

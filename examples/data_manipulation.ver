@@ -1,4 +1,4 @@
-This is the program 'data_loading_demo'.
+This is the program 'data_manipulation_demo'.
 
 /* Load data from CSV as a matrix */
 Load 'my_data' from "examples/data.csv" as a matrix.
@@ -9,14 +9,6 @@ Call 'matrix_get_column' with 'my_data' and "value" stored to 'values'.
 
 Create 'factors' as a double vector of size 5.
 Call 'matrix_get_column' with 'my_data' and "factor" stored to 'factors'.
-
-/* Use the extracted data for analysis */
-Create 'avg_val' as a double.
-Create 'std_val' as a double.
-Call 'mean' with 'values' and 5 stored to 'avg_val'.
-Call 'standard_deviation' with 'values' and 5 stored to 'std_val'.
-
-Call 'printf' with "Loaded 5 rows. Mean value: %.2f, StdDev: %.2f\n" and 'avg_val' and 'std_val' stored to nothing.
 
 /* Vector math on extracted columns */
 Create 'results' as a double vector of size 5.
@@ -33,12 +25,12 @@ For every iteration of 'i' from 0 to 5:
     Replace 'results' at index 'i' with 'res'.
 End iteration of 'i' from 0 to 5.
 
-Create 'r0' as a double.
-Replace 'r0' with an element of 'results' at index 0.
-Call 'printf' with "First result (value * factor): %.2f\n" and 'r0' stored to nothing.
+/* Put the results BACK into the matrix as a new column! */
+Call 'matrix_set_column' with 'my_data' and "total" and 'results' stored to nothing.
 
-/* Binary loading example - conceptual demo */
-/* In a real scenario, we'd have a .bin file with raw doubles.
-   Load 'bin_data' from "data.bin" as bin matrix with size 10 by 3. */
+/* Save the updated matrix to a new file */
+Save 'my_data' to "examples/updated_data.csv" as a matrix.
 
-End of the program 'data_loading_demo'.
+Call 'printf' with "Data manipulation complete. Result saved to examples/updated_data.csv\n" stored to nothing.
+
+End of the program 'data_manipulation_demo'.

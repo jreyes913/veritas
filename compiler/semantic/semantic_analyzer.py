@@ -58,6 +58,7 @@ class SemanticAnalyzer:
         'sample_poisson': 'double',
         'matrix_get_column': 'double*',
         'matrix_get_column_idx': 'double*',
+        'matrix_set_column': 'void',
         # Linear Algebra
         'solve_linear_system': 'void',
         'matrix_multiply': 'void',
@@ -132,6 +133,8 @@ class SemanticAnalyzer:
                 self._handle_call(node)
             elif kind == 'load':
                 self._handle_load(node, scope)
+            elif kind == 'save':
+                self._handle_save(node, scope)
             elif kind == 'if':
                 self._infer_expr_type(node.get('condition', ''), context='if condition')
                 self._push_scope()
@@ -238,6 +241,13 @@ class SemanticAnalyzer:
         if name.startswith("'") and name.endswith("'"):
             name = name[1:-1]
         self._define(name, 'matrix', scope)
+
+    def _handle_save(self, node: dict, scope: str) -> None:
+        name = node['name'].replace('\x00', ' ').strip()
+        if name.startswith("'") and name.endswith("'"):
+            name = name[1:-1]
+        if self._lookup(name) is None:
+            raise SemanticError(f"Undefined matrix '{name}' in Save statement")
 
     def _infer_target_type(self, target: str) -> str:
         target = target.strip()

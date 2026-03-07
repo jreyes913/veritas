@@ -594,6 +594,10 @@ class Parser:
             self._handle_load(s)
             return
 
+        if s.startswith('Save '):
+            self._handle_save(s)
+            return
+
         self._current_scope().append({
             'kind': 'error',
             'message': 'unrecognized instruction',
@@ -615,6 +619,20 @@ class Parser:
             })
         else:
             self._emit_error("malformed Load statement", s)
+
+    def _handle_save(self, s: str) -> None:
+        # Save 'XYZ' to "filepath" as a matrix.
+        m = re.match(r"Save '(.+?)' to \"([^\"]+)\" as a? (matrix|bin matrix)$", s, re.IGNORECASE)
+        if m:
+            name, path, kind = m.groups()
+            self._current_scope().append({
+                'kind': 'save',
+                'name': name,
+                'path': path,
+                'type': kind.lower()
+            })
+        else:
+            self._emit_error("malformed Save statement", s)
 
     def _current_scope(self) -> list[ASTNode]:
         return self._scope_stack[-1]
@@ -1071,6 +1089,16 @@ class CodeGen:
                 return [f'{pad}{name} = matrix_load_bin("{path}", {rows}, {cols});']
             return [f'{pad}/* Unknown load type: {typ} */']
 
+        if kind == 'save':
+            name = node['name']
+            path = node['path']
+            typ = node['type']
+            if typ == 'matrix':
+                return [f'{pad}matrix_save_csv({name}, "{path}");']
+            elif typ == 'bin matrix':
+                return [f'{pad}matrix_save_bin({name}, "{path}");']
+            return [f'{pad}/* Unknown save type: {typ} */']
+
         if kind == 'for':
             # inclusive means 'through' -> <=, exclusive means 'to' -> <
             op = '<=' if node['inclusive'] else '<'
@@ -1326,8 +1354,11 @@ class CodeGen:
             'void matrix_multiply(double* a, double* b, int rows_a, int cols_a, int cols_b, double* out);',
             'Matrix* matrix_load_csv(const char* filepath);',
             'Matrix* matrix_load_bin(const char* filepath, int rows, int cols);',
+            'void matrix_save_csv(Matrix* mat, const char* filepath);',
+            'void matrix_save_bin(Matrix* mat, const char* filepath);',
             'double* matrix_get_column(Matrix* mat, const char* col_name);',
             'double* matrix_get_column_idx(Matrix* mat, int col_idx);',
+            'void matrix_set_column(Matrix* mat, const char* col_name, double* vec);',
             'void invert_matrix(double* a, int n, double* out);',
             'double determinant(double* a, int n);',
             'double trace(double* a, int n);',

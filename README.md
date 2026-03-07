@@ -1,10 +1,10 @@
-# Veritas (v1.3.1)
+# Veritas (v1.4.0)
 
 > *A programming language designed to resemble clear, structured human English while remaining deterministic and easy to parse.*
 
 Veritas compiles `.ver` source files to C via a Python transpiler (`vcparser.py`). Programs read like well-structured English instructions — every statement follows strict grammatical rules that map unambiguously to C output.
 
-Version 1.3.1 introduces first-class **Vectors** and **Matrices**, indexed element access/creation, and the **"raised to the"** exponent operator.
+Version 1.4.0 introduces first-class **Data Persistence** with `Load` and `Save` statements, enabling CSV and binary matrix I/O.
 
 ---
 
@@ -21,6 +21,7 @@ Version 1.3.1 introduces first-class **Vectors** and **Matrices**, indexed eleme
     - **Vectors**: Numeric-only sequences with math support (`plus`, `minus`, `multiplied by`).
     - **Arrays**: Non-numeric sequences for strings or other types.
     - **Matrices**: Multi-dimensional structures for math or mixed data.
+- **Data I/O**: Load and Save matrices from CSV or Binary files (`Load 'data' from "input.csv" as matrix`).
 - **Managed Strings**: First-class `string` type. Concatenate with `Call 'join'` and compare with `is equal to`.
 - **Advanced Math**: Native support for **Exponents** (`raised to the`) and **Complex Arithmetic** (`1j`, `4.2j`).
 - **Indexed Access**: Create variables from elements (`Create 'x' as an element of 'arr' at index 0`) or update them directly (`Replace 'arr' at index 0 with 5`).

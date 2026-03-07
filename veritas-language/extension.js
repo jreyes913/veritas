@@ -9,6 +9,8 @@ const hoverData = {
     'Create': "Declares a new variable, array, vector, or matrix. Syntax: Create 'name' as a type [vector/array of size N] [with value val] OR Create 'name' as an element of 'container' at index I.",
     'vector': "A numeric-only one-column data structure with math support.",
     'matrix': "A data structure for mathematical operations or dataframe-like mixed data.",
+    'Load': "Loads a matrix from a CSV or binary file. Syntax: Load 'name' from \"path\" as matrix [with size R by C].",
+    'Save': "Saves a matrix to a CSV or binary file. Syntax: Save 'name' to \"path\" as matrix.",
     'Replace': "Assigns a value to a variable or element at index. Syntax: Replace 'name' [at index I] with value.",
     'Call': "Invokes a function. Syntax: Call 'name' [with args], stored to 'dest'.",
     'For every iteration': "Starts a for loop. Syntax: For every iteration of 'i' from A through/to B.",

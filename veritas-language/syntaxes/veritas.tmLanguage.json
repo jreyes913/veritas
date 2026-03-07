@@ -49,7 +49,7 @@
     },
     "keyword_blue": {
       "patterns": [
-        { "name": "veritas.kw.blue", "match": "\\b(Call|Replace|stored to|returning)\\b" }
+        { "name": "veritas.kw.blue", "match": "\\b(Call|Replace|Load|Save|stored to|returning)\\b" }
       ]
     },
     "keyword_green": {

@@ -209,9 +209,23 @@
 <span class="kw-call">Replace</span> <span class="kw-ident">'v_sum'</span> with <span class="kw-ident">the quantity</span> <span class="kw-ident">'v1'</span> <span class="kw-op">plus</span> <span class="kw-ident">'v2'</span>.</code></pre>
   </section>
 
+  <section class="section">
+    <p class="section-number">§ V</p>
+    <h2>Data Persistence (I/O)</h2>
+    <p>Load and save matrices from external files. Supports CSV and raw Binary formats.</p>
+    <pre><code><span class="kw-cmt">/* Load from CSV */</span>
+<span class="kw-blue">Load</span> <span class="kw-ident">'data'</span> <span class="kw-blue">from</span> <span class="kw-str">"input.csv"</span> <span class="kw-blue">as matrix</span>.
+
+<span class="kw-cmt">/* Load from Binary (requires dimensions) */</span>
+<span class="kw-blue">Load</span> <span class="kw-ident">'raw'</span> <span class="kw-blue">from</span> <span class="kw-str">"data.bin"</span> <span class="kw-blue">as bin matrix</span> with size <span class="kw-num">100</span> by <span class="kw-num">3</span>.
+
+<span class="kw-cmt">/* Save to CSV */</span>
+<span class="kw-blue">Save</span> <span class="kw-ident">'data'</span> to <span class="kw-str">"output.csv"</span> <span class="kw-blue">as matrix</span>.</code></pre>
+  </section>
+
   <footer>
     <span>REGULA VERITATIS</span>
-    <span>v1.3.1</span>
+    <span>v1.4.0</span>
   </footer>
 </div>
 </body>
