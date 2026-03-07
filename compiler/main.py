@@ -12,11 +12,17 @@ from compiler.semantic import SemanticAnalyzer, format_symbol_table
 
 
 def _fmt_decl(d: dict) -> str:
-    if d['is_array']:
-        base = f"Create '{d['name']}' as a {d['ctype']} array of size {d['size']}"
+    container = d.get('container', 'array' if d.get('is_array') else 'scalar')
+    if container in {'array', 'vector'}:
+        base = f"Create '{d['name']}' as a {d['ctype']} {container} of size {d['size']}"
         if d['init']:
             return base + ' with values ' + ', '.join(d['init']) + '.'
         return base + '.'
+    if container == 'matrix':
+        cols = d.get('columns') or []
+        if cols:
+            return f"Create '{d['name']}' as a matrix with columns: " + ', '.join(cols) + '.'
+        return f"Create '{d['name']}' as a matrix."
     if d['init'] is not None:
         return f"Create '{d['name']}' as {d['ctype']} with value {d['init']}."
     return f"Create '{d['name']}' as {d['ctype']}."

@@ -25,7 +25,7 @@ class ArenaAllocatorTests(unittest.TestCase):
         src = textwrap.dedent(
             """
             This is the program 'array'.
-            Create 't' as a double array of size 100.
+            Create 't' as a double vector of size 100.
             End of the program 'array'.
             """
         )
