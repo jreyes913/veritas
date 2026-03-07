@@ -1,0 +1,31 @@
+/* Veritas Standard Units Library (SI) */
+
+Define dimension 'Length'.
+Define dimension 'Time'.
+Define dimension 'Mass'.
+Define dimension 'Temperature'.
+Define dimension 'Current'.
+
+/* Base Units */
+Define unit 'meter' for 'Length' with symbol "m".
+Define unit 'second' for 'Time' with symbol "s".
+Define unit 'kilogram' for 'Mass' with symbol "kg".
+Define unit 'kelvin' for 'Temperature' with symbol "K".
+Define unit 'ampere' for 'Current' with symbol "A".
+
+/* Derived Units: Kinematics */
+Define unit 'area' as 'meter' squared with symbol "m2".
+Define unit 'volume' as 'meter' cubed with symbol "m3".
+Define unit 'velocity' as 'meter' divided by 'second' with symbol "m/s".
+Define unit 'acceleration' as 'meter' divided by 'second' squared with symbol "m/s2".
+
+/* Derived Units: Dynamics */
+Define unit 'Newton' as 'kilogram' multiplied by 'acceleration' with symbol "N".
+Define unit 'Pascal' as 'Newton' divided by 'area' with symbol "Pa".
+Define unit 'Joule' as 'Newton' multiplied by 'meter' with symbol "J".
+Define unit 'Watt' as 'Joule' divided by 'second' with symbol "W".
+
+/* Derived Units: Electrical */
+Define unit 'Coulomb' as 'ampere' multiplied by 'second' with symbol "C".
+Define unit 'Volt' as 'Watt' divided by 'ampere' with symbol "V".
+Define unit 'Ohm' as 'Volt' divided by 'ampere' with symbol "O".

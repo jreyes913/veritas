@@ -1,0 +1,6 @@
+\documentclass{article}
+\begin{document}
+\section{Simulation Report}
+The calculated speed was \veritas{Calculated Speed} m/s.
+The distance covered was \veritas{Distance} meters.
+\end{document}

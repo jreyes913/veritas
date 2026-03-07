@@ -10,6 +10,34 @@
     ],
     "description": "Create a new Veritas program"
   },
+  "Include": {
+    "prefix": "include",
+    "body": [
+      "Include '${1:units.ver}'."
+    ],
+    "description": "Include a Veritas file"
+  },
+  "Define Dimension": {
+    "prefix": "dimension",
+    "body": [
+      "Define dimension '${1:Length}'."
+    ],
+    "description": "Define a physical dimension"
+  },
+  "Define Unit": {
+    "prefix": "unit",
+    "body": [
+      "Define unit '${1:meter}' for '${2:Length}' with symbol \"${3:m}\"."
+    ],
+    "description": "Define a base unit"
+  },
+  "Export": {
+    "prefix": "export",
+    "body": [
+      "Export '${1:var}' as '${2:Label}' for report."
+    ],
+    "description": "Export variable for reporting"
+  },
   "Function Definition": {
     "prefix": "define",
     "body": [
@@ -46,7 +74,7 @@
   "Create Scalar": {
     "prefix": "create",
     "body": [
-      "Create '${1:var}' as a ${2:type} with value ${3:0}."
+      "Create '${1:var}' as a ${2:double}${3:<unit>} with value ${4:0.0}."
     ],
     "description": "Create a scalar variable"
   },
@@ -59,67 +87,11 @@
     ],
     "description": "Create an array with values"
   },
-  "Create Indexed Element": {
-    "prefix": "create_index",
-    "body": [
-      "Create '${1:name}' as an element of '${2:container}' at index ${3:0}."
-    ],
-    "description": "Create a variable from an array/vector element"
-  },
   "Create Vector": {
     "prefix": "vector",
     "body": [
       "Create '${1:v}' as a ${2:double} vector of size ${3:3} with values: ${4:1.0}, ${5:2.0}, and ${6:3.0}."
     ],
     "description": "Create a vector with values"
-  },
-  "Create Matrix": {
-    "prefix": "matrix",
-    "body": [
-      "Create '${1:mat}' as a matrix with columns: \"${2:col1}\", and \"${3:col2}\"."
-    ],
-    "description": "Create a matrix with column names"
-  },
-  "Load Matrix": {
-    "prefix": "load",
-    "body": [
-      "Load '${1:mat}' from \"${2:data.csv}\" as matrix."
-    ],
-    "description": "Load a matrix from CSV"
-  },
-  "Save Matrix": {
-    "prefix": "save",
-    "body": [
-      "Save '${1:mat}' to \"${2:updated.csv}\" as matrix."
-    ],
-    "description": "Save a matrix to CSV"
-  },
-  "Call with stored to": {
-    "prefix": "call",
-    "body": [
-      "Call '${1:func}' with ${2:args}, stored to ${3:nothing}."
-    ],
-    "description": "Call a function and store result"
-  },
-  "Replace with value": {
-    "prefix": "replace",
-    "body": [
-      "Replace '${1:var}' with ${2:value}."
-    ],
-    "description": "Replace variable value"
-  },
-  "Replace at index": {
-    "prefix": "index_replace",
-    "body": [
-      "Replace '${1:var}' at index ${2:0} with ${3:value}."
-    ],
-    "description": "Replace array/vector element at index"
-  },
-  "Replace with quantity": {
-    "prefix": "replace",
-    "body": [
-      "Replace '${1:var}' with the quantity ${2:expr}."
-    ],
-    "description": "Replace variable with a quantity expression"
   }
 }

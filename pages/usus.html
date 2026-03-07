@@ -154,78 +154,40 @@
 
   <section class="section">
     <p class="section-number">§ I</p>
-    <h2>Type System</h2>
-    <p>Veritas passes C types through directly after stripping the English article. Multi-word types and pointers are supported.</p>
-    <table>
-      <thead><tr><th>Veritas</th><th>C Equivalent</th></tr></thead>
-      <tbody>
-        <tr><td>a string</td><td>char* (Managed)</td></tr>
-        <tr><td>an int</td><td>int</td></tr>
-        <tr><td>a float</td><td>float</td></tr>
-        <tr><td>a double complex</td><td>double complex</td></tr>
-        <tr><td>a vector</td><td>Numeric-only sequence</td></tr>
-        <tr><td>a matrix</td><td>Mathematical data structure</td></tr>
-        <tr><td>nothing</td><td>void</td></tr>
-      </tbody>
-    </table>
+    <h2>Units & Dimensional Types</h2>
+    <p>Veritas v1.5.0 supports compile-time dimensional analysis. You can define base dimensions and units, and then use them as generic type parameters.</p>
+    <pre><code><span class="kw-ctrl">Define dimension</span> <span class="kw-ident">'Length'</span>.
+<span class="kw-ctrl">Define unit</span> <span class="kw-ident">'meter'</span> for <span class="kw-ident">'Length'</span> with symbol <span class="kw-str">"m"</span>.
+
+<span class="kw-cmt">/* Derived units support arithmetic expressions */</span>
+<span class="kw-ctrl">Define unit</span> <span class="kw-ident">'velocity'</span> as <span class="kw-ident">'meter'</span> divided by <span class="kw-ident">'second'</span>.
+
+<span class="kw-cmt">/* Usage in declarations */</span>
+<span class="kw-decl">Create</span> <span class="kw-ident">'dist'</span> <span class="kw-type">as a double&lt;meter&gt;</span> with value <span class="kw-num">100.0</span>.</code></pre>
+    <div class="callout"><strong>Strictness:</strong> The compiler will reject operations like <code>'kilogram' plus 'meter'</code>.</div>
   </section>
 
   <section class="section">
     <p class="section-number">§ II</p>
-    <h2>Variable Creation</h2>
-    <pre><code><span class="kw-decl">Create</span> <span class="kw-ident">'name'</span> <span class="kw-type">as a string</span>.
-<span class="kw-decl">Create</span> <span class="kw-ident">'x'</span> <span class="kw-type">as a double</span> with value <span class="kw-num">3.14</span>.
-<span class="kw-decl">Create</span> <span class="kw-ident">'c'</span> <span class="kw-type">as a double complex</span> with value <span class="kw-num">1.0</span> <span class="kw-op">plus</span> <span class="kw-num">2.0j</span>.
-<span class="kw-cmt">/* Indexed creation */</span>
-<span class="kw-decl">Create</span> <span class="kw-ident">'val'</span> <span class="kw-type">as an element of</span> <span class="kw-ident">'data'</span> <span class="kw-type">at index</span> <span class="kw-num">0</span>.</code></pre>
+    <h2>Literate Reporting</h2>
+    <p>Close the gap between code and documentation. Export variables to a report manifest using the <code>Export</code> statement.</p>
+    <pre><code><span class="kw-decl">Create</span> <span class="kw-ident">'result'</span> <span class="kw-type">as a double</span> with value <span class="kw-num">99.9</span>.
+<span class="kw-blue">Export</span> <span class="kw-ident">'result'</span> as <span class="kw-str">'Final Precision'</span> for report.</code></pre>
+    <p>In your <code>report.vtex</code> (LaTeX) template, use <code>\veritas{Final Precision}</code> to inject the value automatically.</p>
+    <pre><code>veritas report --template=my_report.vtex</code></pre>
   </section>
 
   <section class="section">
     <p class="section-number">§ III</p>
-    <h2>Data Structures & List Rules</h2>
-    <p>Lists follow strict grammatical rules based on item count:</p>
-    <ul>
-      <li><strong>1 item:</strong> <code>X</code></li>
-      <li><strong>2 items:</strong> <code>X and Y</code> (No commas)</li>
-      <li><strong>3+ items:</strong> <code>X, Y, and Z</code> (Oxford comma required)</li>
-    </ul>
-    <pre><code><span class="kw-cmt">/* Vector (Numeric) */</span>
-<span class="kw-decl">Create</span> <span class="kw-ident">'v'</span> <span class="kw-type">as a double vector</span> of size <span class="kw-num">3</span> with values:
-<span class="kw-num">1.0</span>, <span class="kw-num">2.0</span>, and <span class="kw-num">3.0</span>.
-
-<span class="kw-cmt">/* Array (Non-numeric) */</span>
-<span class="kw-decl">Create</span> <span class="kw-ident">'labels'</span> <span class="kw-type">as a string array</span> of size <span class="kw-num">2</span> with values:
-<span class="kw-str">"Initial"</span> and <span class="kw-str">"Result"</span>.
-
-<span class="kw-cmt">/* Matrix */</span>
-<span class="kw-decl">Create</span> <span class="kw-ident">'dataset'</span> <span class="kw-type">as a matrix</span> with columns: <span class="kw-str">"ID"</span> and <span class="kw-str">"Value"</span>.</code></pre>
-  </section>
-
-  <section class="section">
-    <p class="section-number">§ IV</p>
-    <h2>Arithmetic & Exponents</h2>
-    <p>Standard operators are supported, including the specialized power operator.</p>
-    <pre><code><span class="kw-call">Replace</span> <span class="kw-ident">'y'</span> with <span class="kw-ident">'x'</span> <span class="kw-op">raised to the</span> <span class="kw-num">2</span>.
-<span class="kw-call">Replace</span> <span class="kw-ident">'v_sum'</span> with <span class="kw-ident">the quantity</span> <span class="kw-ident">'v1'</span> <span class="kw-op">plus</span> <span class="kw-ident">'v2'</span>.</code></pre>
-  </section>
-
-  <section class="section">
-    <p class="section-number">§ V</p>
-    <h2>Data Persistence (I/O)</h2>
-    <p>Load and save matrices from external files. Supports CSV and raw Binary formats.</p>
-    <pre><code><span class="kw-cmt">/* Load from CSV */</span>
-<span class="kw-blue">Load</span> <span class="kw-ident">'data'</span> <span class="kw-blue">from</span> <span class="kw-str">"input.csv"</span> <span class="kw-blue">as matrix</span>.
-
-<span class="kw-cmt">/* Load from Binary (requires dimensions) */</span>
-<span class="kw-blue">Load</span> <span class="kw-ident">'raw'</span> <span class="kw-blue">from</span> <span class="kw-str">"data.bin"</span> <span class="kw-blue">as bin matrix</span> with size <span class="kw-num">100</span> by <span class="kw-num">3</span>.
-
-<span class="kw-cmt">/* Save to CSV */</span>
-<span class="kw-blue">Save</span> <span class="kw-ident">'data'</span> to <span class="kw-str">"output.csv"</span> <span class="kw-blue">as matrix</span>.</code></pre>
+    <h2>Module Includes</h2>
+    <p>Include Veritas source files or C headers. Veritas files (<code>.ver</code>) are parsed recursively, while C headers are injected into the generated output.</p>
+    <pre><code><span class="kw-orange">Include</span> <span class="kw-str">'units.ver'</span>.
+<span class="kw-orange">Include the library</span> <span class="kw-str">'stdio.h'</span>.</code></pre>
   </section>
 
   <footer>
     <span>REGULA VERITATIS</span>
-    <span>v1.4.0</span>
+    <span>v1.5.0</span>
   </footer>
 </div>
 </body>

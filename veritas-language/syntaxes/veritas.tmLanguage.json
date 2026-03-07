@@ -39,22 +39,22 @@
     },
     "keyword_red": {
       "patterns": [
-        { "name": "veritas.kw.red", "match": "\\b(This is the program|End of the program|If|Otherwise|End if|For every iteration|End iteration|End function)\\b" }
+        { "name": "veritas.kw.red", "match": "\\b(This is the program|End of the program|If|Otherwise|End if|For every iteration|End iteration|End function|Define dimension|Define unit)\\b" }
       ]
     },
     "keyword_orange": {
       "patterns": [
-        { "name": "veritas.kw.orange", "match": "\\b(Include the|Define the function|Create)\\b" }
+        { "name": "veritas.kw.orange", "match": "\\b(Include the|Include|Define the function|Create)\\b" }
       ]
     },
     "keyword_blue": {
       "patterns": [
-        { "name": "veritas.kw.blue", "match": "\\b(Call|Replace|Load|Save|stored to|returning)\\b" }
+        { "name": "veritas.kw.blue", "match": "\\b(Call|Replace|Load|Save|Export|stored to|returning|for report)\\b" }
       ]
     },
     "keyword_green": {
       "patterns": [
-        { "name": "veritas.kw.green", "match": "\\b(as|an|a)\\b" },
+        { "name": "veritas.kw.green", "match": "\\b(as|an|a|for)\\b" },
         { "name": "storage.type.veritas", "match": "\\b(nothing|string|int|float|double|complex|vector|matrix|pointer|unsigned|uint\\d+_t|int\\d+_t)\\b" }
       ]
     },
@@ -65,12 +65,12 @@
     },
     "keyword_yellow": {
       "patterns": [
-        { "name": "veritas.kw.yellow", "match": "\\b(plus|minus|multiplied by|divided by|is equal to|is greater than|is less than|and|with|with value|with values|at index|an element of|the address of|value at|array of size|of|from|through|to)\\b" }
+        { "name": "veritas.kw.yellow", "match": "\\b(plus|minus|multiplied by|divided by|is equal to|is greater than|is less than|and|with|with value|with values|at index|an element of|the address of|value at|array of size|of|from|through|to|symbol|squared|cubed)\\b" }
       ]
     },
     "punctuation": {
       "name": "punctuation.terminator.veritas",
-      "match": "(?<!\\d)\\.(?!\\d)|:|,|;"
+      "match": "(?<!\\d)\\.(?!\\d)|:|,|;|\\<|\\>"
     }
   }
 }

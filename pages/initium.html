@@ -144,39 +144,36 @@
 
   <section class="section">
     <p class="section-number">§ I</p>
-    <h2>Structure of a Program</h2>
-    <p>Every Veritas program must be enclosed in matching declaration statements. The program name must be consistent at the start and end.</p>
-    <pre><code><span class="kw-ctrl">This is the program</span> <span class="kw-ident">'hello_world'</span>.
-
-<span class="kw-cmt">/* Your instructions go here */</span>
-
-<span class="kw-ctrl">End of the program</span> <span class="kw-ident">'hello_world'</span>.</code></pre>
+    <h2>Project-Based Workflow</h2>
+    <p>Veritas v1.5.0 adopts a project-centric workflow managed via the <code>veritas.toml</code> manifest. Use the CLI to scaffold new projects:</p>
+    <pre><code>veritas new orbit_sim</code></pre>
+    <p>This creates a directory structure with <code>src/main.ver</code>, <code>tests/</code>, and a <code>veritas.toml</code> configuration file.</p>
   </section>
 
   <section class="section">
     <p class="section-number">§ II</p>
-    <h2>The Hello World Example</h2>
-    <p>Veritas handles basic I/O through the standard C library. Note that the common <code>stdio.h</code> is included automatically by the intelligent prelude.</p>
-    <pre><code><span class="kw-ctrl">This is the program</span> <span class="kw-ident">'hello'</span>.
+    <h2>The SI Units Library</h2>
+    <p>Engineering accuracy starts with units. Include the standard library at the top of your program:</p>
+    <pre><code><span class="kw-ctrl">This is the program</span> <span class="kw-ident">'physics'</span>.
 
-<span class="kw-call">Call</span> <span class="kw-ident">'printf'</span> with <span class="kw-str">"Hello, Veritas!
-"</span>, stored to nothing.
+<span class="kw-orange">Include</span> <span class="kw-str">'units.ver'</span>.
 
-<span class="kw-ctrl">End of the program</span> <span class="kw-ident">'hello'</span>.</code></pre>
+<span class="kw-decl">Create</span> <span class="kw-ident">'radius'</span> <span class="kw-type">as a double&lt;meter&gt;</span> with value <span class="kw-num">10.0</span>.
+
+<span class="kw-ctrl">End of the program</span> <span class="kw-ident">'physics'</span>.</code></pre>
   </section>
 
   <section class="section">
     <p class="section-number">§ III</p>
-    <h2>Sentence Termination</h2>
-    <p>Consistency is the core of truth. Every instruction must end with a <strong>period (<code>.</code>)</strong>. You may split a single instruction across multiple lines for readability; the compiler will treat it as a single sentence until it encounters the period.</p>
-    <pre><code><span class="kw-decl">Create</span> <span class="kw-ident">'x'</span>
-<span class="kw-type">as an int</span>
-with value <span class="kw-num">42</span>.</code></pre>
+    <h2>Compilation & Execution</h2>
+    <p>Build and run your project with a single command:</p>
+    <pre><code>veritas run</code></pre>
+    <p>The compiler will first perform dimensional analysis, then transpile to C, and finally compile the binary using your configured C compiler.</p>
   </section>
 
   <footer>
     <span>REGULA VERITATIS</span>
-    <span>v1.4.0</span>
+    <span>v1.5.0</span>
   </footer>
 </div>
 </body>

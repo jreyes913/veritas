@@ -21,6 +21,7 @@
     --mono:     'IBM Plex Mono', monospace;
     --sans:     'IBM Plex Sans', sans-serif;
     --serif:    'Cinzel', serif;
+    --blue:     '#74C7EC';
   }
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -146,58 +147,42 @@
 
   <section class="section">
     <p class="section-number">§ I</p>
-    <h2>Finance: Compound Interest</h2>
-    <pre><code><span class="kw-ctrl">This is the program</span> <span class="kw-ident">'finance'</span>.
+    <h2>Engineering: Structural Force</h2>
+    <pre><code><span class="kw-ctrl">This is the program</span> <span class="kw-ident">'structural'</span>.
 
-<span class="kw-decl">Create</span> <span class="kw-ident">'principal'</span> <span class="kw-type">as a double</span> with value <span class="kw-num">1000.0</span>.
-<span class="kw-decl">Create</span> <span class="kw-ident">'rate'</span> <span class="kw-type">as a double</span> with value <span class="kw-num">0.05</span>.
-<span class="kw-decl">Create</span> <span class="kw-ident">'years'</span> <span class="kw-type">as an int</span> with value <span class="kw-num">5</span>.
+<span class="kw-orange">Include</span> <span class="kw-str">'units.ver'</span>.
 
-<span class="kw-ctrl">For every iteration</span> of <span class="kw-ident">'y'</span> from <span class="kw-num">1</span> through <span class="kw-ident">'years'</span>:
-    <span class="kw-call">Replace</span> <span class="kw-ident">'principal'</span> with <span class="kw-ident">'principal'</span> <span class="kw-op">multiplied by</span> <span class="kw-ident">the quantity</span> <span class="kw-num">1.0</span> <span class="kw-op">plus</span> <span class="kw-ident">'rate'</span>.
-    <span class="kw-call">Call</span> <span class="kw-ident">'printf'</span> with <span class="kw-str">"Year %d: %.2f
-"</span> and <span class="kw-ident">'y'</span> and <span class="kw-ident">'principal'</span>, stored to nothing.
-<span class="kw-ctrl">End iteration</span> of <span class="kw-ident">'y'</span> from <span class="kw-num">1</span> through <span class="kw-ident">'years'</span>.
+<span class="kw-decl">Create</span> <span class="kw-ident">'mass'</span> <span class="kw-type">as a double&lt;kilogram&gt;</span> with value <span class="kw-num">500.0</span>.
+<span class="kw-decl">Create</span> <span class="kw-ident">'g'</span> <span class="kw-type">as a double&lt;acceleration&gt;</span> with value <span class="kw-num">9.81</span>.
 
-<span class="kw-ctrl">End of the program</span> <span class="kw-ident">'finance'</span>.</code></pre>
+<span class="kw-cmt">/* Newton = kg * m/s2. The compiler verifies this! */</span>
+<span class="kw-decl">Create</span> <span class="kw-ident">'weight'</span> <span class="kw-type">as a double&lt;Newton&gt;</span> with value <span class="kw-ident">'mass'</span> <span class="kw-op">multiplied by</span> <span class="kw-ident">'g'</span>.
+
+<span class="kw-blue">Export</span> <span class="kw-ident">'weight'</span> <span class="kw-blue">as</span> <span class="kw-str">'Calculated Weight'</span> <span class="kw-blue">for report</span>.
+
+<span class="kw-ctrl">End of the program</span> <span class="kw-ident">'structural'</span>.</code></pre>
   </section>
 
   <section class="section">
     <p class="section-number">§ II</p>
-    <h2>Physics: Free Fall</h2>
-    <pre><code><span class="kw-ctrl">This is the program</span> <span class="kw-ident">'physics'</span>.
+    <h2>Dynamics: Projectile Trajectory</h2>
+    <pre><code><span class="kw-ctrl">This is the program</span> <span class="kw-ident">'projectile'</span>.
 
-<span class="kw-decl">Create</span> <span class="kw-ident">'g'</span> <span class="kw-type">as a double</span> with value <span class="kw-num">9.81</span>.
-<span class="kw-decl">Create</span> <span class="kw-ident">'t'</span> <span class="kw-type">as a double</span> with value <span class="kw-num">2.5</span>.
-<span class="kw-decl">Create</span> <span class="kw-ident">'height'</span> <span class="kw-type">as a double</span>.
+<span class="kw-orange">Include</span> <span class="kw-str">'units.ver'</span>.
 
-<span class="kw-cmt">/* h = 0.5 * g * t^2 using exponents */</span>
-<span class="kw-decl">Create</span> <span class="kw-ident">'t_sq'</span> <span class="kw-type">as a double</span> with value <span class="kw-ident">'t'</span> <span class="kw-op">raised to the</span> <span class="kw-num">2</span>.
-<span class="kw-call">Replace</span> <span class="kw-ident">'height'</span> with <span class="kw-num">0.5</span> <span class="kw-op">multiplied by</span> <span class="kw-ident">'g'</span> <span class="kw-op">multiplied by</span> <span class="kw-ident">'t_sq'</span>.
+<span class="kw-decl">Create</span> <span class="kw-ident">'v0'</span> <span class="kw-type">as a double&lt;velocity&gt;</span> with value <span class="kw-num">50.0</span>.
+<span class="kw-decl">Create</span> <span class="kw-ident">'time'</span> <span class="kw-type">as a double&lt;second&gt;</span> with value <span class="kw-num">2.0</span>.
+<span class="kw-decl">Create</span> <span class="kw-ident">'dist'</span> <span class="kw-type">as a double&lt;meter&gt;</span> with value <span class="kw-ident">'v0'</span> <span class="kw-op">multiplied by</span> <span class="kw-ident">'time'</span>.
 
-<span class="kw-call">Call</span> <span class="kw-ident">'printf'</span> with <span class="kw-str">"Distance: %.2f meters
-"</span> and <span class="kw-ident">'height'</span>, stored to nothing.
+<span class="kw-call">Call</span> <span class="kw-ident">'printf'</span> with <span class="kw-str">"Distance: %.2f m
+"</span> and <span class="kw-ident">'dist'</span>, stored to nothing.
 
-<span class="kw-ctrl">End of the program</span> <span class="kw-ident">'physics'</span>.</code></pre>
-  </section>
-
-  <section class="section">
-    <p class="section-number">§ III</p>
-    <h2>Math: Vector Operations</h2>
-    <pre><code><span class="kw-ctrl">This is the program</span> <span class="kw-ident">'vectors'</span>.
-
-<span class="kw-decl">Create</span> <span class="kw-ident">'v1'</span> <span class="kw-type">as a double vector</span> of size <span class="kw-num">3</span> with values: <span class="kw-num">1.0</span>, <span class="kw-num">2.0</span>, and <span class="kw-num">3.0</span>.
-<span class="kw-decl">Create</span> <span class="kw-ident">'v2'</span> <span class="kw-type">as a double vector</span> of size <span class="kw-num">3</span> with values: <span class="kw-num">10.0</span>, <span class="kw-num">20.0</span>, and <span class="kw-num">30.0</span>.
-<span class="kw-decl">Create</span> <span class="kw-ident">'res'</span> <span class="kw-type">as a double vector</span> of size <span class="kw-num">3</span>.
-
-<span class="kw-call">Replace</span> <span class="kw-ident">'res'</span> with <span class="kw-ident">the quantity</span> <span class="kw-ident">'v1'</span> <span class="kw-op">plus</span> <span class="kw-ident">'v2'</span>.
-
-<span class="kw-ctrl">End of the program</span> <span class="kw-ident">'vectors'</span>.</code></pre>
+<span class="kw-ctrl">End of the program</span> <span class="kw-ident">'projectile'</span>.</code></pre>
   </section>
 
   <footer>
     <span>REGULA VERITATIS</span>
-    <span>v1.4.0</span>
+    <span>v1.5.0</span>
   </footer>
 </div>
 </body>

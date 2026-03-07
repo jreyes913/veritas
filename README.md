@@ -1,10 +1,10 @@
-# Veritas (v1.4.0)
+# Veritas (v1.5.0)
 
 > *A programming language designed to resemble clear, structured human English while remaining deterministic and easy to parse.*
 
-Veritas compiles `.ver` source files to C via a Python transpiler (`vcparser.py`). Programs read like well-structured English instructions — every statement follows strict grammatical rules that map unambiguously to C output.
+Veritas compiles `.ver` source files to C via a Python transpiler. Programs read like well-structured English instructions — every statement follows strict grammatical rules that map unambiguously to C output.
 
-Version 1.4.0 introduces first-class **Data Persistence** with `Load` and `Save` statements, enabling CSV and binary matrix I/O.
+Version 1.5.0 introduces a first-class **Units & Dimensional Analysis** system and automated **LaTeX Report Generation**.
 
 ---
 
@@ -17,6 +17,8 @@ Version 1.4.0 introduces first-class **Data Persistence** with `Load` and `Save`
 ## Key Features
 
 - **Natural Syntax**: Statements like `Create 'x' as an integer with value 10.`
+- **Units & Dimensional Analysis**: Define dimensions and units (SI/Imperial). The compiler verifies dimensional consistency at compile-time (e.g., catching `kg + m` errors).
+- **Automated Reporting**: Export variables directly to LaTeX reports using the `Export` statement and `veritas report`.
 - **Managed Data Structures**:
     - **Vectors**: Numeric-only sequences with math support (`plus`, `minus`, `multiplied by`).
     - **Arrays**: Non-numeric sequences for strings or other types.
@@ -24,13 +26,7 @@ Version 1.4.0 introduces first-class **Data Persistence** with `Load` and `Save`
 - **Data I/O**: Load and Save matrices from CSV or Binary files (`Load 'data' from "input.csv" as matrix`).
 - **Managed Strings**: First-class `string` type. Concatenate with `Call 'join'` and compare with `is equal to`.
 - **Advanced Math**: Native support for **Exponents** (`raised to the`) and **Complex Arithmetic** (`1j`, `4.2j`).
-- **Indexed Access**: Create variables from elements (`Create 'x' as an element of 'arr' at index 0`) or update them directly (`Replace 'arr' at index 0 with 5`).
-- **Intelligent Prelude**: Common C headers (`stdio.h`, `math.h`, etc.) are included automatically. Scientific headers like `complex.h`, `fftw3.h`, and `gsl_statistics.h` are injected when needed.
-- **Strict Grammar**: Deterministic list formatting ensures clarity:
-    - 1 item: `X`
-    - 2 items: `X and Y` (No commas).
-    - 3+ items: `X, Y, and Z` (Oxford comma required).
-- **Direct C Interop**: Use any C type directly (e.g., `uint32_t`).
+- **Strict Grammar**: Deterministic list formatting ensures clarity (Oxford comma required for 3+ items).
 
 ---
 
@@ -41,36 +37,13 @@ The full language specification is in [`REGULA.html`](./REGULA.html) — the *Re
 To read it locally, open the file in any browser:
 
 ```bash
-open REGULA.html        # macOS
 xdg-open REGULA.html    # Linux
+open REGULA.html        # macOS
 start REGULA.html       # Windows
 ```
 
 Or view it at GitHub Pages:
-
 [https://jreyes913.github.io/veritas/REGULA.html](https://jreyes913.github.io/veritas/REGULA.html)
-
----
-
-
-## Arena Allocator & String Runtime
-
-Generated C programs use a 16MB arena allocator. Strings created via `Call 'join'` or `string` declarations are automatically managed within the arena.
-
-```c
-/* Generated C Example */
-Arena arena = arena_create(16 * 1024 * 1024);
-global_arena = &arena;
-
-char* *name = arena_alloc(&arena, sizeof(char*));
-*name = join("Jose", "Reyes");
-
-if (strcmp(*name, "JoseReyes") == 0) {
-    printf("Managed strings work!\n");
-}
-
-arena_destroy(&arena);
-```
 
 ---
 
@@ -79,62 +52,47 @@ arena_destroy(&arena);
 **Requirements**
 - Python 3.10+
 - GCC
+- (Optional) PDFLaTeX for report compilation
 
-**Clone the repo**
+**Setup**
 
 ```bash
 git clone https://github.com/jreyes913/veritas.git
 cd veritas
-```
-
-**Compile a `.ver` file**
-
-```bash
-# Locally
-./veritas example.ver
-
-# Or after installing globally (see below)
-veritas example.ver
-```
-
-### Global Installation
-
-To run `veritas` from anywhere:
-
-```bash
-sudo ln -s "$(pwd)/veritas" /usr/local/bin/veritas
-```
-
-Then you can simply run:
-```bash
-veritas example.ver
+# Install globally
+sudo ln -s "$(pwd)/compiler/main.py" /usr/local/bin/veritas
 ```
 
 ---
 
-## Syntax Highlighting & File Icon
+## CLI Usage
 
-The `veritas-language/` folder contains a VS Code extension that provides:
-
-- Syntax highlighting for `.ver` files (including support for `j` literals)
-- A file icon in the Explorer sidebar
-
-### Installation
+Veritas now features a unified CLI for the entire development lifecycle:
 
 ```bash
-cp -r veritas-language ~/.vscode/extensions/
+veritas new my_project      # Create a new project structure
+cd my_project
+veritas build               # Compile src/main.ver to binary
+veritas run                 # Build and execute the program
+veritas test                # Run unit and integration tests
+veritas report              # Generate LaTeX/PDF report from exports
 ```
 
-or
+---
 
-```bash
-cd veritas-language
-vsce package
+## Units System Example
+
+```veritas
+Include 'units.ver'.
+
+Create 'mass' as a double<kilogram> with value 5.0.
+Create 'accel' as a double<acceleration> with value 9.8.
+
+/* The compiler verifies that Newton = kg * m/s^2 */
+Create 'force' as a double<Newton> with value 'mass' multiplied by 'accel'.
+
+Export 'force' as 'Total Force' for report.
 ```
-
-Then install VSIX package in VS Code.
-
-Restart VS Code to activate.
 
 ---
 
@@ -143,29 +101,16 @@ Restart VS Code to activate.
 ```
 .
 ├── REGULA.html              # Full language specification (styled)
-├── vcparser.py              # Veritas → C transpiler compatibility entrypoint
 ├── compiler/
-│   ├── main.py              # Main compiler entrypoint
+│   ├── cli.py               # Unified CLI implementation
+│   ├── config.py            # Project configuration (veritas.toml)
 │   ├── legacy.py            # Core parser and code generator
-│   ├── runtime.c            # C runtime for strings and scientific helpers
-│   ├── frontend/            # Lexer and Parser
-│   ├── semantic/            # Semantic Analyzer and Symbol Table
-│   └── ir/                  # Intermediate Representation and Lowering
-├── veritas                  # Build script (transpile + compile + link)
-├── examples/                # Example programs (finance, physics, math, statistics)
-├── tests/                   # Compiler unit tests and error handling cases
-├── .gitignore               # .gitignore (excludes binaries and .c files)
-├── veritas-language/        # VS Code extension
-└── README.md
+│   ├── semantic/            # Semantic & Dimensional Analysis
+│   └── std/                 # Standard Library (units.ver)
+├── examples/                # Example programs
+├── tests/                   # Compiler tests
+└── veritas-language/        # VS Code extension
 ```
-
----
-
-## Contact
-
-**Jose Reyes**  
-Email: [jstunner55@gmail.com](mailto:jstunner55@gmail.com)  
-LinkedIn: [jose-reyes-634768264](https://www.linkedin.com/in/jose-reyes-634768264/)
 
 ---
 

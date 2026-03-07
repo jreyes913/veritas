@@ -139,39 +139,41 @@
     <h2>Requirements</h2>
     <p>To run the Veritas compiler and generate executables, you must have the following installed on your system:</p>
     <ul>
-      <li><strong>Python 3.10+</strong> (for the transpiler)</li>
-      <li><strong>GCC</strong> (for compiling the generated C code)</li>
+      <li><strong>Python 3.10+</strong></li>
+      <li><strong>GCC</strong> (or another C compiler)</li>
+      <li><strong>PDFLaTeX</strong> (Optional, for report generation)</li>
     </ul>
   </section>
 
   <section class="section">
     <p class="section-number">§ II</p>
-    <h2>Cloning the Repository</h2>
-    <p>Obtain the source code and the compiler by cloning the official repository:</p>
+    <h2>Cloning & Global Setup</h2>
+    <p>Obtain the source code and link the unified CLI to your path:</p>
     <pre><code>git clone https://github.com/jreyes913/veritas.git
-cd veritas</code></pre>
+cd veritas
+sudo ln -s "$(pwd)/compiler/main.py" /usr/local/bin/veritas</code></pre>
   </section>
 
   <section class="section">
     <p class="section-number">§ III</p>
-    <h2>Global Installation</h2>
-    <p>To run the <code>veritas</code> command from any directory, create a symbolic link in <code>/usr/local/bin</code>:</p>
-    <pre><code>sudo ln -s "$(pwd)/veritas" /usr/local/bin/veritas</code></pre>
-    <p>Now you can compile any file using:</p>
-    <pre><code>veritas example.ver</code></pre>
+    <h2>Verification</h2>
+    <p>Test your installation by creating a new project:</p>
+    <pre><code>veritas new project_alpha
+cd project_alpha
+veritas run</code></pre>
   </section>
 
   <section class="section">
     <p class="section-number">§ IV</p>
     <h2>VS Code Extension</h2>
-    <p>For the best development experience, install the provided VS Code extension for syntax highlighting and file icons.</p>
+    <p>For syntax highlighting and unit type support, install the extension:</p>
     <pre><code>cp -r veritas-language ~/.vscode/extensions/</code></pre>
-    <p>Restart VS Code after copying the extension folder.</p>
+    <p>Restart VS Code to activate.</p>
   </section>
 
   <footer>
     <span>REGULA VERITATIS</span>
-    <span>v1.4.0</span>
+    <span>v1.5.0</span>
   </footer>
 </div>
 </body>

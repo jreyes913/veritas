@@ -1,0 +1,11 @@
+This is the program 'units_fail'.
+Define dimension 'Length'.
+Define dimension 'Time'.
+Define unit 'm' for 'Length' with symbol "m".
+Define unit 's' for 'Time' with symbol "s".
+
+Create 'd' as a double<m> with value 10.0.
+Create 't' as a double<s> with value 2.0.
+Create 'v' as a double<m> with value 'd' plus 't'. 
+
+End of the program 'units_fail'.

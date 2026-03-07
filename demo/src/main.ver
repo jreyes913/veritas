@@ -1,0 +1,14 @@
+This is the program 'units_si'.
+
+Include 'units.ver'.
+
+Create 'mass' as a double<kilogram> with value 5.0.
+Create 'accel' as a double<acceleration> with value 9.8.
+
+/* Newton = kg * m/s2 */
+Create 'force' as a double<Newton> with value 'mass' multiplied by 'accel'.
+
+Call 'printf' with "Force: %f N
+", 'force' stored to nothing.
+
+End of the program 'units_si'.

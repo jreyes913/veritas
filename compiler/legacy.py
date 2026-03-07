@@ -49,7 +49,10 @@ _STARTERS = re.compile(
     r'This is the program'   r'|'
     r'End of the program'    r'|'
     r'Include the'           r'|'
+    r'Include '               r'|'
     r'Define the function'   r'|'
+    r'Define dimension'      r'|'
+    r'Define unit'           r'|'
     r'End function'          r'|'
     r'Create '               r'|'
     r'For every iteration'   r'|'
@@ -58,7 +61,10 @@ _STARTERS = re.compile(
     r'Otherwise'             r'|'
     r'End if'                r'|'
     r'Replace '              r'|'
-    r'Call '
+    r'Call '                 r'|'
+    r'Load '                 r'|'
+    r'Save '                 r'|'
+    r'Export '
     r')'
 )
 
@@ -68,22 +74,26 @@ def strip_comments(src: str) -> str:
     return re.sub(r'/\*.*?\*/', '', src, flags=re.DOTALL)
 
 
-def logical_lines(src: str) -> list[str]:
+def logical_lines(src: str) -> list[tuple[str, int]]:
     """Group physical lines into logical statements using LL(1) starters."""
-    physical = [ln.strip() for ln in src.splitlines() if ln.strip()]
-    logical: list[str] = []
+    physical = [(ln.strip(), i + 1) for i, ln in enumerate(src.splitlines()) if ln.strip()]
+    logical: list[tuple[str, int]] = []
     current: list[str] = []
+    start_line = 0
 
-    for line in physical:
+    for line, line_no in physical:
         if _STARTERS.match(line):
             if current:
-                logical.append(' '.join(current))
+                logical.append((' '.join(current), start_line))
             current = [line]
+            start_line = line_no
         else:
             current.append(line)
+            if not current and not start_line:
+                start_line = line_no
 
     if current:
-        logical.append(' '.join(current))
+        logical.append((' '.join(current), start_line))
 
     return logical
 
@@ -100,14 +110,25 @@ def strip_terminal_period(s: str) -> str:
 # 2.  TYPE MAPPING
 # ===========================================================================
 
+def parse_type_and_unit(raw: str) -> tuple[str, Optional[str]]:
+    """
+    Parses 'int<meter>' into ('int', 'meter').
+    Also handles 'int vector<meter>' -> ('int vector', 'meter').
+    """
+    m = re.match(r'^(.+?)<(.+?)>$', raw.strip())
+    if m:
+        return m.group(1).strip(), m.group(2).strip()
+    return raw.strip(), None
+
 def map_type(t: str) -> str:
     """
     Strip the Veritas article ('a'/'an') and pass the C type through directly.
-    'nothing' is the only reserved keyword and maps to 'void'.
-    'string' maps to 'char*'.
-    Warns if the wrong article is used; output is unaffected either way.
     """
     t = t.strip()
+    # Strip unit if present, handled by parse_type_and_unit in parser
+    if '<' in t and '>' in t:
+        t = re.sub(r'<.+?>', '', t)
+
     if t == 'nothing':
         return 'void'
     if t == 'string':
@@ -475,6 +496,8 @@ class Parser:
             'globals':   [],
             'functions': [],
             'main':      [],
+            'dimensions': [], # Change to list
+            'units':      [], # Change to list
         }
         self._scope_stack: list[list[ASTNode]] = [self._module['main']]
         self._block_stack: list[ASTNode] = []
@@ -482,16 +505,16 @@ class Parser:
         self._current_func: Optional[ASTNode] = None
         self._main_scope: list[ASTNode] = self._module['main']
 
-    def feed(self, stmt: str) -> None:
+    def feed(self, stmt: str, line: int) -> None:
         s = _unprotect(strip_terminal_period(stmt.strip()))
-        self._dispatch(s)
+        self._dispatch(s, line)
 
     def ast(self) -> ASTNode:
         self._finalize()
         return self._module
 
-    def _emit_error(self, message: str, raw: str) -> None:
-        self._main_scope.append({'kind': 'error', 'message': message, 'raw': raw})
+    def _emit_error(self, message: str, raw: str, line: int = 0) -> None:
+        self._main_scope.append({'kind': 'error', 'message': message, 'raw': raw, 'line': line})
 
     def _finalize(self) -> None:
         while len(self._scope_stack) > 1:
@@ -515,7 +538,7 @@ class Parser:
             elif block['kind'] == 'if':
                 self._emit_error('unclosed if block', f"If {block['condition']}")
 
-    def _dispatch(self, s: str) -> None:
+    def _dispatch(self, s: str, line: int) -> None:
         m = re.match(r"This is the program '(\w+)'", s)
         if m:
             self._module['name'] = m.group(1)
@@ -526,85 +549,136 @@ class Parser:
 
         m = re.match(r"Include the (?:library|header) '([^']+)'", s)
         if m:
-            self._module['includes'].append({'kind': 'include', 'path': m.group(1)})
+            self._module['includes'].append({'kind': 'include', 'path': m.group(1), 'line': line})
+            return
+
+        m = re.match(r"Include '([^']+)'", s)
+        if m:
+            # Veritas includes are handled by the recursive parser in compile_veritas,
+            # but we still store them in the AST just in case.
+            self._module['includes'].append({'kind': 'include_ver', 'path': m.group(1), 'line': line})
+            return
+
+        m = re.match(r"Define dimension '(\w+)'", s)
+        if m:
+            self._handle_define_dimension(m.group(1), line)
+            return
+
+        # Define unit 'meter' for 'Length' with symbol "m"
+        m = re.match(r"Define unit '(\w+)' for '(\w+)' with symbol \"(.+?)\"", s)
+        if m:
+            self._handle_define_base_unit(m.group(1), m.group(2), m.group(3), line)
+            return
+
+        # Define unit 'Newton' as ... with symbol "N"
+        m = re.match(r"Define unit '(\w+)' as (.+?) with symbol \"(.+?)\"", s)
+        if m:
+            self._handle_define_derived_unit(m.group(1), m.group(2), m.group(3), line)
             return
 
         m = re.match(r"Define the function '(\w+)'(.*)", s, re.DOTALL)
         if m:
-            self._begin_function(m.group(1), m.group(2))
+            self._begin_function(m.group(1), m.group(2), line)
             return
 
         m = re.match(r"End function '(\w+)'", s)
         if m:
-            self._end_function(m.group(1))
+            self._end_function(m.group(1), line)
             return
 
         if s.startswith('Create '):
-            self._handle_create(s)
+            self._handle_create(s, line)
             return
 
         m = re.match(r"For every iteration of '(\w+)' from (\S+) (through|to) (\S+)", s)
         if m:
-            self._begin_for(m)
+            self._begin_for(m, line)
             return
 
         m = re.match(r"End iteration of '(\w+)' from (\S+) (through|to) (\S+)", s)
         if m:
-            self._end_for()
+            self._end_for(line)
             return
 
         m = re.match(r"If (.+?):\s*$", s)
         if m:
-            self._begin_if(m.group(1))
+            self._begin_if(m.group(1), line)
             return
 
         if re.match(r"Otherwise\s*:?\s*$", s):
-            self._switch_else()
+            self._switch_else(line)
             return
 
         if re.match(r"End if .+", s):
-            self._end_if()
+            self._end_if(line)
             return
 
         m = re.match(r"Replace (.+?) at index (.+?) with (.+)$", s, re.IGNORECASE)
         if m:
             target = translate_value(m.group(1))
             idx = translate_value(m.group(2))
+            val_raw = m.group(3).strip()
             self._current_scope().append({
                 'kind':   'assign',
                 'target': f'{target}[{idx}]',
-                'value':  translate_expression(m.group(3).strip()),
+                'target_raw': m.group(1), # Store raw target for analysis
+                'value':  translate_expression(val_raw),
+                'value_raw': val_raw,
+                'line': line
             })
             return
 
         m = re.match(r"Replace (.+?) with (.+)$", s, re.IGNORECASE)
         if m:
+            val_raw = m.group(2).strip()
             self._current_scope().append({
                 'kind':   'assign',
                 'target': translate_value(m.group(1)),
-                'value':  translate_expression(m.group(2).strip()),
+                'target_raw': m.group(1),
+                'value':  translate_expression(val_raw),
+                'value_raw': val_raw,
+                'line': line
             })
             return
 
         if s.startswith('Call '):
-            self._handle_call(s)
+            self._handle_call(s, line)
             return
 
         if s.startswith('Load '):
-            self._handle_load(s)
+            self._handle_load(s, line)
             return
 
         if s.startswith('Save '):
-            self._handle_save(s)
+            self._handle_save(s, line)
+            return
+
+        if s.startswith('Export '):
+            self._handle_export(s, line)
             return
 
         self._current_scope().append({
             'kind': 'error',
             'message': 'unrecognized instruction',
             'raw': s,
+            'line': line
         })
 
-    def _handle_load(self, s: str) -> None:
+    def _handle_define_dimension(self, name: str, line: int) -> None:
+        # Check if already in list? For now just append.
+        self._module['dimensions'].append({'kind': 'dimension', 'name': name, 'line': line})
+
+    def _handle_define_base_unit(self, name: str, dim_name: str, symbol: str, line: int) -> None:
+        self._module['units'].append({
+            'kind': 'unit_base', 'name': name, 'dimension': dim_name, 'symbol': symbol, 'line': line
+        })
+
+    def _handle_define_derived_unit(self, name: str, expr: str, symbol: str, line: int) -> None:
+        self._module['units'].append({
+            'kind': 'unit_derived', 'name': name, 'expr': expr, 'symbol': symbol, 'line': line
+        })
+
+    def _handle_load(self, s: str, line: int) -> None:
         # Load 'XYZ' from "filepath" as a matrix.
         m = re.match(r"Load '(.+?)' from \"([^\"]+)\" as a? (matrix|bin matrix)(?: with size (\d+) by (\d+))?$", s, re.IGNORECASE)
         if m:
@@ -615,24 +689,23 @@ class Parser:
                 'path': path,
                 'type': kind.lower(),
                 'rows': int(rows) if rows else None,
-                'cols': int(cols) if cols else None
+                'cols': int(cols) if cols else None,
+                'line': line
             })
         else:
-            self._emit_error("malformed Load statement", s)
+            self._emit_error("malformed Load statement", s, line)
 
-    def _handle_save(self, s: str) -> None:
-        # Save 'XYZ' to "filepath" as a matrix.
-        m = re.match(r"Save '(.+?)' to \"([^\"]+)\" as a? (matrix|bin matrix)$", s, re.IGNORECASE)
+    def _handle_export(self, s: str, line: int) -> None:
+        # Export 'x' (as 'Label')?
+        m = re.match(r"Export '(\w+)'(?: as '(.+?)')?(?: for report)?$", s)
         if m:
-            name, path, kind = m.groups()
+            name = m.group(1)
+            label = m.group(2) or name
             self._current_scope().append({
-                'kind': 'save',
-                'name': name,
-                'path': path,
-                'type': kind.lower()
+                'kind': 'export', 'name': name, 'label': label, 'line': line
             })
         else:
-            self._emit_error("malformed Save statement", s)
+            self._emit_error("malformed Export statement", s, line)
 
     def _current_scope(self) -> list[ASTNode]:
         return self._scope_stack[-1]
@@ -643,7 +716,7 @@ class Parser:
     def _pop_scope(self) -> list[ASTNode]:
         return self._scope_stack.pop()
 
-    def _begin_function(self, name: str, rest: str) -> None:
+    def _begin_function(self, name: str, rest: str, line: int) -> None:
         ret_type = 'void'
         ret_m = re.search(r'\breturning\s+(.+?)$', rest)
         if ret_m:
@@ -661,13 +734,14 @@ class Parser:
             'params':   params,
             'ret_type': ret_type,
             'body':     [],
+            'line':     line
         }
         self._in_function = True
         self._push_scope(self._current_func['body'])
 
-    def _end_function(self, name: str) -> None:
+    def _end_function(self, name: str, line: int) -> None:
         if self._current_func is None or not self._in_function:
-            self._emit_error('End function without active function', f"End function '{name}'")
+            self._emit_error('End function without active function', f"End function '{name}'", line)
             return
 
         if self._current_func['name'] != name:
@@ -677,6 +751,7 @@ class Parser:
                     f"'{self._current_func['name']}'"
                 ),
                 f"End function '{name}'",
+                line
             )
 
         if len(self._scope_stack) > 1:
@@ -685,7 +760,7 @@ class Parser:
         self._current_func = None
         self._in_function = False
 
-    def _handle_create(self, s: str) -> None:
+    def _handle_create(self, s: str, line: int) -> None:
         node: Optional[ASTNode] = None
 
         # 1. NEW: Create 'label' as an element of 'labels' at index 0.
@@ -696,49 +771,66 @@ class Parser:
             node = {
                 'kind': 'declare', 'container': 'indexed_scalar', 'name': name,
                 'source_container': container, 'index': idx_val, 'ctype': 'auto',
-                'is_array': False, 'size': None, 'init': init_c
+                'is_array': False, 'size': None, 'init': init_c, 'line': line,
+                'unit': None
             }
 
         # 2. Vector with values
         if node is None:
             m = re.match(r"Create '(\w+)' as an? ([\w ]+?) vector of size (\d+) with values:(.+)$", s, re.DOTALL)
             if m:
-                name, base, size, vals_raw = m.groups()
+                name, base_raw, size, vals_raw = m.groups()
+                base, unit = parse_type_and_unit(base_raw)
                 vals = parse_argument_list(vals_raw)
                 node = {
                     'kind': 'declare', 'container': 'vector', 'ctype': map_type(base), 'name': name,
-                    'is_array': True, 'size': int(size), 'init': vals,
+                    'is_array': True, 'size': int(size), 'init': vals, 'line': line,
+                    'unit': unit
                 }
 
         # 3. Vector without values
         if node is None:
             m = re.match(r"Create '(\w+)' as an? ([\w ]+?) vector of size (\d+)$", s)
             if m:
-                name, base, size = m.groups()
+                name, base_raw, size = m.groups()
+                base, unit = parse_type_and_unit(base_raw)
                 node = {
                     'kind': 'declare', 'container': 'vector', 'ctype': map_type(base),
-                    'name': name, 'is_array': True, 'size': int(size), 'init': None,
+                    'name': name, 'is_array': True, 'size': int(size), 'init': None, 'line': line,
+                    'unit': unit
                 }
 
         # 4. Array with values
         if node is None:
             m = re.match(r"Create '(\w+)' as an? ([\w ]+?) array of size (\d+) with values:(.+)$", s, re.DOTALL)
             if m:
-                name, base, size, vals_raw = m.groups()
+                name, base_raw, size, vals_raw = m.groups()
+                base, unit = parse_type_and_unit(base_raw)
+                ctype = map_type(base)
+                if ctype in ('int', 'float', 'double'):
+                     from compiler.semantic.analyzer import SemanticError
+                     raise SemanticError(f"Numeric type '{ctype}' should use 'vector', not 'array'", line)
                 vals = parse_argument_list(vals_raw)
                 node = {
-                    'kind': 'declare', 'container': 'array', 'ctype': map_type(base), 'name': name,
-                    'is_array': True, 'size': int(size), 'init': vals,
+                    'kind': 'declare', 'container': 'array', 'ctype': ctype, 'name': name,
+                    'is_array': True, 'size': int(size), 'init': vals, 'line': line,
+                    'unit': unit
                 }
 
         # 5. Array without values
         if node is None:
             m = re.match(r"Create '(\w+)' as an? ([\w ]+?) array of size (\d+)$", s)
             if m:
-                name, base, size = m.groups()
+                name, base_raw, size = m.groups()
+                base, unit = parse_type_and_unit(base_raw)
+                ctype = map_type(base)
+                if ctype in ('int', 'float', 'double'):
+                     from compiler.semantic.analyzer import SemanticError
+                     raise SemanticError(f"Numeric type '{ctype}' should use 'vector', not 'array'", line)
                 node = {
-                    'kind': 'declare', 'container': 'array', 'ctype': map_type(base),
-                    'name': name, 'is_array': True, 'size': int(size), 'init': None,
+                    'kind': 'declare', 'container': 'array', 'ctype': ctype,
+                    'name': name, 'is_array': True, 'size': int(size), 'init': None, 'line': line,
+                    'unit': unit
                 }
 
         # 6. Matrix
@@ -750,31 +842,39 @@ class Parser:
                 node = {
                     'kind': 'declare', 'container': 'matrix', 'ctype': 'matrix',
                     'name': m.group(1), 'is_array': False, 'size': None, 'init': None,
-                    'columns': columns,
+                    'columns': columns, 'line': line,
+                    'unit': None
                 }
 
         # 7. Scalar with value
         if node is None:
             m = re.match(r"Create '(\w+)' as an? (.+?) with value (.+)$", s)
             if m:
+                base_raw = m.group(2).strip()
+                base, unit = parse_type_and_unit(base_raw)
+                val_raw = m.group(3).strip()
                 node = {
-                    'kind': 'declare', 'container': 'scalar', 'ctype': map_type(m.group(2).strip()),
+                    'kind': 'declare', 'container': 'scalar', 'ctype': map_type(base),
                     'name': m.group(1), 'is_array': False, 'size': None,
-                    'init': translate_expression(m.group(3).strip()),
+                    'init': translate_expression(val_raw), 'init_raw': val_raw, 'line': line,
+                    'unit': unit
                 }
 
         # 8. Scalar without value
         if node is None:
             m = re.match(r"Create '(\w+)' as an? (.+)$", s)
             if m:
+                base_raw = m.group(2).strip()
+                base, unit = parse_type_and_unit(base_raw)
                 node = {
-                    'kind': 'declare', 'container': 'scalar', 'ctype': map_type(m.group(2).strip()),
-                    'name': m.group(1), 'is_array': False, 'size': None, 'init': None,
+                    'kind': 'declare', 'container': 'scalar', 'ctype': map_type(base),
+                    'name': m.group(1), 'is_array': False, 'size': None, 'init': None, 'init_raw': None, 'line': line,
+                    'unit': unit
                 }
 
         if node is None:
             self._current_scope().append(
-                {'kind': 'error', 'message': 'malformed Create', 'raw': s})
+                {'kind': 'error', 'message': 'malformed Create', 'raw': s, 'line': line})
             return
 
         if self._in_function:
@@ -782,76 +882,80 @@ class Parser:
         else:
             self._module['globals'].append(node)
 
-    def _begin_for(self, m: re.Match) -> None:
+    def _begin_for(self, m: re.Match, line: int) -> None:
         for_node: ASTNode = {
             'kind': 'for', 'var': m.group(1),
             'start': translate_value(m.group(2)),
             'end':   translate_value(m.group(4).rstrip(':')),
             'inclusive': m.group(3) == 'through', 'body': [],
+            'line': line
         }
         self._current_scope().append(for_node)
         self._block_stack.append(for_node)
         self._push_scope(for_node['body'])
 
-    def _end_for(self) -> None:
+    def _end_for(self, line: int) -> None:
         if not self._block_stack:
-            self._emit_error('End iteration without active loop', 'End iteration')
+            self._emit_error('End iteration without active loop', 'End iteration', line)
             return
         node = self._block_stack[-1]
         if node['kind'] != 'for':
             self._emit_error(
                 'End iteration encountered, but active block is not a loop',
                 'End iteration',
+                line
             )
             return
         if len(self._scope_stack) > 1:
             self._pop_scope()
         self._block_stack.pop()
 
-    def _begin_if(self, condition_raw: str) -> None:
+    def _begin_if(self, condition_raw: str, line: int) -> None:
         if_node: ASTNode = {
             'kind': 'if',
             'condition': translate_condition(condition_raw),
             'then_body': [], 'else_body': [],
+            'line': line
         }
         self._current_scope().append(if_node)
         self._block_stack.append(if_node)
         self._push_scope(if_node['then_body'])
 
-    def _switch_else(self) -> None:
+    def _switch_else(self, line: int) -> None:
         if not self._block_stack:
-            self._emit_error('Otherwise without active If block', 'Otherwise')
+            self._emit_error('Otherwise without active If block', 'Otherwise', line)
             return
         if_node = self._block_stack[-1]
         if if_node['kind'] != 'if':
             self._emit_error(
                 'Otherwise encountered, but active block is not If',
                 'Otherwise',
+                line
             )
             return
         if len(self._scope_stack) > 1:
             self._pop_scope()
         self._push_scope(if_node['else_body'])
 
-    def _end_if(self) -> None:
+    def _end_if(self, line: int) -> None:
         if not self._block_stack:
-            self._emit_error('End if without active If block', 'End if')
+            self._emit_error('End if without active If block', 'End if', line)
             return
         node = self._block_stack[-1]
         if node['kind'] != 'if':
-            self._emit_error('End if encountered, but active block is not If', 'End if')
+            self._emit_error('End if encountered, but active block is not If', 'End if', line)
             return
         if len(self._scope_stack) > 1:
             self._pop_scope()
         self._block_stack.pop()
 
-    def _handle_call(self, s: str) -> None:
+    def _handle_call(self, s: str, line: int) -> None:
         m = re.match(
             r"Call '(\w+)'(?:\s+with\s+(.*?))?\s*,?\s*stored to\s+(.+)$",
             s, re.DOTALL | re.IGNORECASE)
         if not m:
             self._current_scope().append(
-                {'kind': 'error', 'message': 'malformed Call', 'raw': s})
+                {'kind': 'error', 'message': 'malformed Call', 'raw': s, 'line': line})
             return
 
         func_name = m.group(1)
@@ -865,7 +969,7 @@ class Parser:
         dest = None if dest_raw == 'nothing' else translate_value(dest_raw)
 
         self._current_scope().append({
-            'kind': 'call', 'func': func_name, 'args': c_args, 'dest': dest,
+            'kind': 'call', 'func': func_name, 'args': c_args, 'dest': dest, 'line': line
         })
 
 
@@ -1024,42 +1128,29 @@ class CodeGen:
         if kind == 'assign':
             target = node['target']
             value = node['value']
+            target_type = self._get_var_type(target)
             
             # Vector arithmetic check
-            target_type = self._get_var_type(target)
-            if target_type and target_type.startswith('vector<'):
-                m_arith = re.match(r'\((\w+) ([+\-*/]) (\w+)\)', value)
-                if not m_arith:
-                     # Check for Veritas keywords if they were translated
-                     m_arith = re.match(r'\((\w+) (plus|minus|multiplied by|divided by) (\w+)\)', value)
-
+            if target_type and '*' in target_type:
+                # Search for (v1 op v2) pattern
+                m_arith = re.search(r'\(?\s*([a-zA-Z_]\w*)\s*([+\-*/])\s*([a-zA-Z_]\w*)\s*\)?', value)
                 if m_arith:
                     v1, op_sym, v2 = m_arith.groups()
-                    op_map = {'+': '+', '-': '-', '*': '*', '/': '/', 'plus': '+', 'minus': '-', 'multiplied by': '*', 'divided by': '/'}
-                    op = op_map.get(op_sym, op_sym)
+                    v1_type = self._get_var_type(v1)
+                    v2_type = self._get_var_type(v2)
                     
-                    v_size = self._var_sizes.get(target, 1)
-                    if 'double complex' in target_type:
-                        func_map = {'+': 'vector_add', '-': 'vector_sub', '*': 'vector_mul'}
-                        if op in func_map:
-                             return [f'{pad}{func_map[op]}({v1}, {v2}, {target}, {v_size});']
-                    
-                    # Fallback to loop for better type safety with int/float
-                    ln = f"__i_{self._loop_count}"
-                    self._loop_count += 1
-                    return [
-                        f'{pad}for (int {ln} = 0; {ln} < {v_size}; {ln}++) {{ {target}[{ln}] = {v1}[{ln}] {op} {v2}[{ln}]; }}'
-                    ]
-                
-                # If it's a simple assignment to a vector (not arithmetic), handle it
-                # but ONLY if it's not already indexed.
-                if '[' not in target:
-                    target_c = self._rewrite_expr(target, scalars)
-                    # For vector = pointer, we need to be careful with dereferencing.
-                    # _rewrite_expr might add a '*' to target if it thinks it's a scalar.
-                    # Let's manually handle it.
-                    value_c = self._rewrite_expr(value, scalars)
-                    return [f'{pad}{target} = {value_c};']
+                    if v1_type and '*' in v1_type and v2_type and '*' in v2_type:
+                        v_size = self._var_sizes.get(target, 3) 
+                        
+                        target_c = target 
+                        v1_c = v1
+                        v2_c = v2
+                        
+                        ln = f"__i_{self._loop_count}"
+                        self._loop_count += 1
+                        return [
+                            f'{pad}for (int {ln} = 0; {ln} < {v_size}; {ln}++) {{ {target_c}[{ln}] = {v1_c}[{ln}] {op_sym} {v2_c}[{ln}]; }}'
+                        ]
             
             target_c = self._rewrite_expr(target, scalars)
             value_c = self._rewrite_expr(value, scalars)
@@ -1135,6 +1226,30 @@ class CodeGen:
             lines.append(pad + '}')
             return lines
 
+        if kind == 'export':
+            name = node['name']
+            label = node['label']
+            ctype = self._get_var_type(name)
+            
+            lines = [f'{pad}_veritas_init_report();']
+            if not ctype:
+                 # Try to guess or just warn
+                 return [f'{pad}/* Error: Exporting unknown variable {name} */']
+
+            val_expr = f"*{name}"
+            # Scalars are pointers in Veritas except strings/arrays
+            
+            if 'double' in ctype and '*' not in ctype.replace('double*', ''): # Scalar double
+                 lines.append(f'{pad}if (_veritas_report_file) fprintf(_veritas_report_file, "  \\"{label}\\": %.15g,\\n", {val_expr});')
+            elif 'int' in ctype and '*' not in ctype.replace('int*', ''): # Scalar int
+                 lines.append(f'{pad}if (_veritas_report_file) fprintf(_veritas_report_file, "  \\"{label}\\": %d,\\n", {val_expr});')
+            elif 'char*' in ctype: # String
+                 lines.append(f'{pad}if (_veritas_report_file) fprintf(_veritas_report_file, "  \\"{label}\\": \\"%s\\",\\n", {name});')
+            else:
+                 lines.append(f'{pad}/* Export of complex type {ctype} not yet supported */')
+            
+            return lines
+
         if kind == 'error':
             return [f'{pad}/* ERROR: {node["message"]} — {node["raw"]} */']
 
@@ -1145,6 +1260,12 @@ class CodeGen:
         name = node['name']
         container = node.get('container', 'array' if node.get('is_array') else 'scalar')
         
+        # Register type before any container-specific logic
+        if container in {'array', 'vector'}:
+            self._var_types[name] = f"{ctype}*"
+        else:
+            self._var_types[name] = ctype
+            
         is_global = not self._in_function and name in self._global_vars
 
         if container == 'indexed_scalar':
@@ -1156,6 +1277,7 @@ class CodeGen:
 
         if container in {'array', 'vector'}:
             size = node['size']
+            self._var_sizes[name] = size
             decl = f'{ctype} *{name}' if not is_global else name
             lines = [f'{decl} = arena_alloc({arena_ref}, {size} * sizeof({ctype}));']
             if node['init']:
@@ -1180,14 +1302,18 @@ class CodeGen:
         ctype = node['ctype']
         name = node['name']
         container = node.get('container', 'array' if node.get('is_array') else 'scalar')
+        
         if container in {'array', 'vector'}:
+            self._var_types[name] = f"{ctype}*"
             self.global_inits.append(self._decl_c(node, self._main_scalars, arena_ref='&arena'))
             return f'{ctype} *{name};'
 
         if container == 'matrix':
+            self._var_types[name] = 'Matrix*'
             self.global_inits.append(f'{name} = NULL;')
             return f'Matrix *{name};'
 
+        self._var_types[name] = ctype
         self._main_scalars.add(name)
         if node['init'] is None:
             self.global_inits.append(f'{name} = arena_alloc(&arena, sizeof({ctype}));')
@@ -1372,6 +1498,23 @@ class CodeGen:
             'double matrix_norm(double* a, int rows, int cols);',
             'double condition_number(double* a, int n);',
         ]))
+        
+        # Report System Helpers
+        parts.append('\n'.join([
+            'FILE* _veritas_report_file = NULL;',
+            'void _veritas_init_report() {',
+            '    if (!_veritas_report_file) {',
+            '        _veritas_report_file = fopen("veritas_exports.json", "w");',
+            '        if (_veritas_report_file) fprintf(_veritas_report_file, "{\\n");',
+            '    }',
+            '}',
+            'void _veritas_end_report() {',
+            '    if (_veritas_report_file) {',
+            '        fprintf(_veritas_report_file, "  \\"_veritas_end\\": true\\n}\\n");',
+            '        fclose(_veritas_report_file);',
+            '    }',
+            '}',
+        ]))
 
         for fn in self.functions:
             parts.append(fn)
@@ -1385,7 +1528,12 @@ class CodeGen:
         for line in self.global_inits:
             main_lines.append(f'    {line}')
         main_lines.extend(self.main_body)
-        main_lines.extend(['    arena_destroy(&arena);', '    return 0;', '}'])
+        main_lines.extend([
+            '    _veritas_end_report();',
+            '    arena_destroy(&arena);', 
+            '    return 0;', 
+            '}'
+        ])
 
         parts.append('\n'.join(main_lines))
         return '\n\n'.join(parts) + '\n'
@@ -1395,14 +1543,56 @@ class CodeGen:
 # 9.  PUBLIC API
 # ===========================================================================
 
-def compile_veritas(source: str) -> str:
+from compiler.semantic.analyzer import SemanticAnalyzer
+from compiler.semantic.semantic_analyzer import SemanticError
+
+def compile_veritas(source: str, base_dir: str = ".") -> str:
     """Full pipeline: Veritas source → C source."""
     src = strip_comments(source)
     parser = Parser()
-    for stmt in logical_lines(src):
-        parser.feed(stmt)
-    gen = CodeGen()
-    return gen.generate(parser.ast())
+    
+    # Track included files to avoid circularity
+    included_files = set()
+    
+    def parse_source(source_text: str, current_dir: str):
+        for stmt, line in logical_lines(source_text):
+            # Check for Include Veritas file
+            m_inc = re.match(r"Include '([^']+)'", stmt)
+            if m_inc:
+                inc_path = m_inc.group(1)
+                if inc_path.endswith('.ver'):
+                    # Check in current dir or std dir
+                    full_path = os.path.abspath(os.path.join(current_dir, inc_path))
+                    if not os.path.exists(full_path):
+                        std_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "std", inc_path))
+                        if os.path.exists(std_path):
+                            full_path = std_path
+                    
+                    if os.path.exists(full_path) and full_path not in included_files:
+                        included_files.add(full_path)
+                        with open(full_path, "r") as f:
+                            parse_source(strip_comments(f.read()), os.path.dirname(full_path))
+                        continue
+            
+            parser.feed(stmt, line)
+
+    import os
+    parse_source(src, base_dir)
+    
+    ast = parser.ast()
+    
+    # 1. Semantic Analysis: Units
+    units_analyzer = SemanticAnalyzer()
+    units_analyzer.analyze(ast)
+    
+    # 2. Semantic Analysis: Types (Legacy)
+    from compiler.semantic.semantic_analyzer import SemanticAnalyzer as TypeAnalyzer
+    type_analyzer = TypeAnalyzer()
+    symbols = type_analyzer.analyze(ast)
+
+    # 3. Code Generation
+    gen = CodeGen(symbols=symbols)
+    return gen.generate(ast)
 
 
 # ===========================================================================
