@@ -7,17 +7,12 @@
     { "include": "#string" },
     { "include": "#identifier" },
     { "include": "#number" },
-    { "include": "#starterProgram" },
-    { "include": "#starterInclude" },
-    { "include": "#starterFunction" },
-    { "include": "#starterDeclaration" },
-    { "include": "#starterAssignment" },
-    { "include": "#starterCall" },
-    { "include": "#starterIteration" },
-    { "include": "#starterConditional" },
-    { "include": "#typeContext" },
-    { "include": "#operator" },
-    { "include": "#otherKeyword" },
+    { "include": "#keyword_red" },
+    { "include": "#keyword_orange" },
+    { "include": "#keyword_blue" },
+    { "include": "#keyword_green" },
+    { "include": "#keyword_purple" },
+    { "include": "#keyword_yellow" },
     { "include": "#punctuation" }
   ],
   "repository": {
@@ -32,12 +27,7 @@
       "name": "string.quoted.double.veritas",
       "begin": "\"",
       "end": "\"",
-      "patterns": [
-        {
-          "name": "constant.character.escape.veritas",
-          "match": "\\\\[nrtf\\\\\"']"
-        }
-      ]
+      "patterns": [ { "name": "constant.character.escape.veritas", "match": "\\\\[nrtf\\\\\"']" } ]
     },
     "identifier": {
       "name": "variable.other.veritas",
@@ -47,106 +37,36 @@
       "name": "constant.numeric.veritas",
       "match": "-?\\b[0-9]+(?:\\.[0-9]+)?j?\\b"
     },
-    "starterProgram": {
+    "keyword_red": {
       "patterns": [
-        {
-          "name": "keyword.control.program.start.veritas",
-          "match": "\\bThis\\s+is\\s+the\\s+program\\b"
-        },
-        {
-          "name": "keyword.control.program.end.veritas",
-          "match": "\\bEnd\\s+of\\s+the\\s+program\\b"
-        }
+        { "name": "veritas.kw.red", "match": "\\b(This is the program|End of the program|If|Otherwise|End if|For every iteration|End iteration|End function)\\b" }
       ]
     },
-    "starterInclude": {
-      "name": "keyword.control.include.veritas",
-      "match": "\\bInclude\\s+the\\b"
-    },
-    "starterFunction": {
+    "keyword_orange": {
       "patterns": [
-        {
-          "name": "keyword.control.function.start.veritas",
-          "match": "\\bDefine\\s+the\\s+function\\b"
-        },
-        {
-          "name": "keyword.control.function.end.veritas",
-          "match": "\\bEnd\\s+function\\b"
-        }
+        { "name": "veritas.kw.orange", "match": "\\b(Include the|Define the function|Create)\\b" }
       ]
     },
-    "starterDeclaration": {
-      "name": "keyword.control.declaration.veritas",
-      "match": "\\bCreate\\b"
-    },
-    "starterAssignment": {
-      "name": "keyword.control.assignment.veritas",
-      "match": "\\bReplace\\b"
-    },
-    "starterCall": {
-      "name": "keyword.control.call.veritas",
-      "match": "\\bCall\\b"
-    },
-    "starterIteration": {
+    "keyword_blue": {
       "patterns": [
-        {
-          "name": "keyword.control.loop.start.veritas",
-          "match": "\\bFor\\s+every\\s+iteration\\b"
-        },
-        {
-          "name": "keyword.control.loop.end.veritas",
-          "match": "\\bEnd\\s+iteration\\b"
-        }
+        { "name": "veritas.kw.blue", "match": "\\b(Call|Replace|stored to|returning)\\b" }
       ]
     },
-    "starterConditional": {
+    "keyword_green": {
       "patterns": [
-        {
-          "name": "keyword.control.conditional.end.veritas",
-          "match": "\\bEnd\\s+if\\b"
-        },
-        {
-          "name": "keyword.control.conditional.else.veritas",
-          "match": "\\bOtherwise\\b"
-        },
-        {
-          "name": "keyword.control.conditional.if.veritas",
-          "match": "\\bIf\\b"
-        }
+        { "name": "veritas.kw.green", "match": "\\b(as|an|a)\\b" },
+        { "name": "storage.type.veritas", "match": "\\b(nothing|string|int|float|double|complex|pointer|unsigned|uint\\d+_t|int\\d+_t)\\b" }
       ]
     },
-    "typeContext": {
+    "keyword_purple": {
       "patterns": [
-        {
-          "name": "storage.type.veritas",
-          "match": "\\bnothing\\b"
-        },
-        {
-          "begin": "\\b(as|returning)\\s+",
-          "beginCaptures": {
-            "1": { "name": "keyword.other.veritas" }
-          },
-          "end": "(?=\\b(with\\s+value|with\\s+values|with|from|through|to|stored\\s+to|and)\\b|[:.,]|$)",
-          "patterns": [
-            {
-              "name": "keyword.other.veritas",
-              "match": "\\ban?\\b"
-            },
-            {
-              "name": "storage.type.veritas",
-              "match": "\\b[A-Za-z_][A-Za-z0-9_]*\\b"
-            }
-          ]
-        }
+        { "name": "veritas.kw.purple", "match": "\\b(the quantity)\\b" }
       ]
     },
-    "operator": {
-      "name": "keyword.operator.veritas",
-      "match": "\\b(multiplied\\s+by|divided\\s+by|plus|minus|is\\s+greater\\s+than\\s+or\\s+equal\\s+to|is\\s+less\\s+than\\s+or\\s+equal\\s+to|is\\s+greater\\s+than|is\\s+less\\s+than|is\\s+equal\\s+to)\\b"
-    },
-    "otherKeyword": {
-      "name": "keyword.other.veritas",
-      "match": "\\b(library|header|function|program|iteration|of|from|through|to|with|with\\s+value|with\\s+values|stored\\s+to|the\\s+address\\s+of|value\\s+at|an\\s+element\\s+of|at\\s+index|array\\s+of\\s+size|the\\s+quantity|and)\\b"
+    "keyword_yellow": {
+      "patterns": [
+        { "name": "veritas.kw.yellow", "match": "\\b(plus|minus|multiplied by|divided by|is equal to|is greater than|is less than|and|with|with value|with values|at index|an element of|the address of|value at|array of size|of|from|through|to)\\b" }
+      ]
     },
     "punctuation": {
       "name": "punctuation.terminator.veritas",
