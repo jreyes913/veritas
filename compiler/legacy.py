@@ -728,10 +728,14 @@ class CodeGen:
     """Walks the module AST and produces C source code."""
 
     def __init__(self) -> None:
-        self.includes:  list[str] = []
-        self.globals:   list[str] = []
+        self.includes: list[str] = []
+        self.globals: list[str] = []
+        self.global_inits: list[str] = []
         self.functions: list[str] = []
         self.main_body: list[str] = []
+        self._main_scalars: set[str] = set()
+        self._in_function: bool = False
+        self._func_scalars: set[str] = set()
 
     def generate(self, module: ASTNode) -> str:
         self._gen_includes(module['includes'])
@@ -741,12 +745,18 @@ class CodeGen:
         return self._render()
 
     def _gen_includes(self, nodes: list[ASTNode]) -> None:
+        required = ['stdlib.h', 'stdio.h', 'stddef.h']
+        self.includes.extend([f'#include <{h}>' for h in required])
+        seen = set(required)
         for node in nodes:
-            self.includes.append(f'#include <{node["path"]}>')
+            path = node['path']
+            if path not in seen:
+                self.includes.append(f'#include <{path}>')
+                seen.add(path)
 
     def _gen_globals(self, nodes: list[ASTNode]) -> None:
         for node in nodes:
-            self.globals.append(self._decl_c(node))
+            self.globals.append(self._global_decl_c(node))
 
     def _gen_functions(self, nodes: list[ASTNode]) -> None:
         for func in nodes:
@@ -754,40 +764,47 @@ class CodeGen:
 
     def _gen_main(self, nodes: list[ASTNode]) -> None:
         for node in nodes:
-            for line in self._node_c(node, indent=1):
-                self.main_body.append(line)
+            self.main_body.extend(self._node_c(node, indent=1))
 
     def _node_c(self, node: ASTNode, indent: int) -> list[str]:
-        pad  = '    ' * indent
+        pad = '    ' * indent
         kind = node['kind']
+        scalars = self._func_scalars if self._in_function else self._main_scalars
 
         if kind == 'declare':
-            return [pad + self._decl_c(node)]
+            return [pad + self._decl_c(node, scalars, arena_ref=self._arena_ref())]
 
         if kind == 'assign':
-            return [f'{pad}{node["target"]} = {node["value"]};']
+            target = self._rewrite_expr(node['target'], scalars)
+            value = self._rewrite_expr(node['value'], scalars)
+            return [f'{pad}{target} = {value};']
 
         if kind == 'call':
-            args_str = ', '.join(node['args'])
-            call     = f'{node["func"]}({args_str})'
+            args_str = ', '.join(self._rewrite_expr(arg, scalars) for arg in node['args'])
+            call = f'{node["func"]}({args_str})'
             if node['dest'] is None:
                 return [f'{pad}{call};']
-            return [f'{pad}{node["dest"]} = {call};']
+            return [f'{pad}{self._rewrite_expr(node["dest"], scalars)} = {call};']
 
         if kind == 'for':
-            op  = '<=' if node['inclusive'] else '<'
+            op = '<=' if node['inclusive'] else '<'
             var = node['var']
+            start = self._rewrite_expr(node['start'], scalars)
+            end = self._rewrite_expr(node['end'], scalars)
             lines = [
-                f'{pad}for (int {var} = {node["start"]}; '
-                f'{var} {op} {node["end"]}; {var}++) {{'
+                f'{pad}int *{var} = arena_alloc({self._arena_ref()}, sizeof(int));',
+                f'{pad}*{var} = {start};',
+                f'{pad}for (; *{var} {op} {end}; (*{var})++) {{',
             ]
+            scalars.add(var)
             for child in node['body']:
                 lines.extend(self._node_c(child, indent + 1))
             lines.append(pad + '}')
             return lines
 
         if kind == 'if':
-            lines = [f'{pad}if ({node["condition"]}) {{']
+            cond = self._rewrite_expr(node['condition'], scalars)
+            lines = [f'{pad}if ({cond}) {{']
             for child in node['then_body']:
                 lines.extend(self._node_c(child, indent + 1))
             if node['else_body']:
@@ -802,18 +819,61 @@ class CodeGen:
 
         return [f'{pad}/* UNKNOWN NODE KIND: {kind} */']
 
-    def _decl_c(self, node: ASTNode) -> str:
+    def _decl_c(self, node: ASTNode, scalar_vars: set[str], arena_ref: str) -> str:
         ctype = node['ctype']
-        name  = node['name']
+        name = node['name']
+
         if node['is_array']:
             size = node['size']
+            lines = [f'{ctype} *{name} = arena_alloc({arena_ref}, {size} * sizeof({ctype}));']
             if node['init']:
-                vals = ', '.join(node['init'])
-                return f'{ctype} {name}[{size}] = {{{vals}}};'
-            return f'{ctype} {name}[{size}];'
+                for idx, val in enumerate(node['init']):
+                    lines.append(f'{name}[{idx}] = {self._rewrite_expr(val, scalar_vars)};')
+            return ' '.join(lines)
+
+        scalar_vars.add(name)
         if node['init'] is not None:
-            return f'{ctype} {name} = {node["init"]};'
-        return f'{ctype} {name};'
+            init = self._rewrite_expr(node['init'], scalar_vars)
+            return f'{ctype} *{name} = arena_alloc({arena_ref}, sizeof({ctype})); *{name} = {init};'
+        return f'{ctype} *{name} = arena_alloc({arena_ref}, sizeof({ctype}));'
+
+    def _global_decl_c(self, node: ASTNode) -> str:
+        ctype = node['ctype']
+        name = node['name']
+        if node['is_array']:
+            self.global_inits.append(self._decl_c(node, self._main_scalars, arena_ref='&arena'))
+            return f'{ctype} *{name};'
+
+        self._main_scalars.add(name)
+        if node['init'] is None:
+            self.global_inits.append(f'{name} = arena_alloc(&arena, sizeof({ctype}));')
+        else:
+            init = self._rewrite_expr(node['init'], self._main_scalars)
+            self.global_inits.append(
+                f'{name} = arena_alloc(&arena, sizeof({ctype})); *{name} = {init};'
+            )
+        return f'{ctype} *{name};'
+
+    def _arena_ref(self) -> str:
+        return 'global_arena' if self._in_function else '&arena'
+
+    def _rewrite_expr(self, expr: str, scalar_vars: set[str]) -> str:
+        out = expr
+        placeholders: dict[str, str] = {}
+        for idx, name in enumerate(sorted(scalar_vars, key=len, reverse=True)):
+            placeholder = f'__ARENA_ADDR_{idx}__'
+            replaced = re.sub(rf'&{re.escape(name)}(?!\w)', placeholder, out)
+            if replaced != out:
+                placeholders[placeholder] = name
+                out = replaced
+            out = re.sub(
+                rf'(?<![\w\*\&]){re.escape(name)}(?!\w)(?!\s*\[)',
+                f'*{name}',
+                out,
+            )
+        for placeholder, replacement in placeholders.items():
+            out = out.replace(placeholder, replacement)
+        return out
 
     def _func_c(self, func: ASTNode) -> list[str]:
         def _render_param(ctype: str, name: str) -> str:
@@ -825,9 +885,16 @@ class CodeGen:
         param_str = ', '.join(
             _render_param(ctype, pname) for ctype, pname in func['params']
         ) or 'void'
+
         lines = [f'{func["ret_type"]} {func["name"]}({param_str})', '{']
+        prev_in_function = self._in_function
+        prev_scalars = self._func_scalars
+        self._in_function = True
+        self._func_scalars = set()
         for child in func['body']:
             lines.extend(self._node_c(child, indent=1))
+        self._in_function = prev_in_function
+        self._func_scalars = prev_scalars
         lines.append('}')
         return lines
 
@@ -837,11 +904,61 @@ class CodeGen:
             parts.append('\n'.join(self.includes))
         if self.globals:
             parts.append('\n'.join(self.globals))
+
+        parts.append('\n'.join([
+            'typedef struct {',
+            '    unsigned char *memory;',
+            '    size_t capacity;',
+            '    size_t offset;',
+            '} Arena;',
+            '',
+            'Arena arena_create(size_t size) {',
+            '    Arena arena;',
+            '    arena.memory = malloc(size);',
+            '    arena.capacity = size;',
+            '    arena.offset = 0;',
+            '    if (!arena.memory) {',
+            '        fprintf(stderr, "Arena allocation failed\\n");',
+            '        exit(1);',
+            '    }',
+            '    return arena;',
+            '}',
+            '',
+            'void* arena_alloc(Arena *arena, size_t size) {',
+            '    if (arena->offset + size > arena->capacity) {',
+            '        fprintf(stderr, "Arena out of memory\\n");',
+            '        exit(1);',
+            '    }',
+            '    void *ptr = arena->memory + arena->offset;',
+            '    arena->offset += size;',
+            '    return ptr;',
+            '}',
+            '',
+            'void arena_destroy(Arena *arena) {',
+            '    free(arena->memory);',
+            '    arena->memory = NULL;',
+            '    arena->capacity = 0;',
+            '    arena->offset = 0;',
+            '}',
+            '',
+            'Arena *global_arena;',
+        ]))
+
         for fn in self.functions:
             parts.append(fn)
-        parts.append(
-            '\n'.join(['int main(void)', '{'] + self.main_body + ['}'])
-        )
+
+        main_lines = [
+            'int main(void)',
+            '{',
+            '    Arena arena = arena_create(16 * 1024 * 1024);',
+            '    global_arena = &arena;',
+        ]
+        for line in self.global_inits:
+            main_lines.append(f'    {line}')
+        main_lines.extend(self.main_body)
+        main_lines.extend(['    arena_destroy(&arena);', '    return 0;', '}'])
+
+        parts.append('\n'.join(main_lines))
         return '\n\n'.join(parts) + '\n'
 
 

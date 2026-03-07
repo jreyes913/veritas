@@ -38,6 +38,32 @@ https://jreyes913.github.io/veritas/REGULA.html
 
 ---
 
+
+## Arena Allocator Runtime Example
+
+Generated C programs now use a 16MB arena allocator and allocate variables from the arena.
+
+```c
+Arena arena = arena_create(16 * 1024 * 1024);
+
+int *x = arena_alloc(&arena, sizeof(int));
+double *t = arena_alloc(&arena, 100 * sizeof(double));
+
+*x = 5;
+for (int i = 0; i < 100; i++) {
+    t[i] = (double)i * 0.5;
+}
+
+printf("x = %d\n", *x);
+for (int i = 0; i < 5; i++) {
+    printf("t[%d] = %.2f\n", i, t[i]);
+}
+
+arena_destroy(&arena);
+```
+
+---
+
 ## Installation
 
 **Requirements**
