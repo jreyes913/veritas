@@ -138,6 +138,7 @@ COMPARE_OPS: list[tuple[str, str]] = [
 ]
 
 ARITH_OPS: list[tuple[str, str]] = [
+    ('raised to the', 'pow'),
     ('multiplied by', '*'),
     ('divided by',    '/'),
     ('plus',          '+'),
@@ -223,6 +224,13 @@ def _parse_quantity_clause(clause: str) -> tuple[Optional[str], str]:
     return None, clause
 
 
+def _render_arith_expr(lhs: str, rhs: str, op: str) -> str:
+    """Render a binary arithmetic expression in C syntax."""
+    if op == 'pow':
+        return f'pow({lhs}, {rhs})'
+    return f'{lhs} {op} {rhs}'
+
+
 def _translate_simple(expr: str, allow_chained: bool = False) -> str:
     """
     Translate an arithmetic expression containing no quantity clauses.
@@ -266,10 +274,10 @@ def _translate_simple(expr: str, allow_chained: bool = False) -> str:
             # not the first occurrence, to get correct left-associativity.
             lhs = expr[:best_pos].strip()
             rhs = expr[best_pos + len(best_vop):].strip()
-            return (
-                f'{_translate_simple(lhs, allow_chained=True)}'
-                f' {best_cop} '
-                f'{_translate_inner(rhs)}'
+            return _render_arith_expr(
+                _translate_simple(lhs, allow_chained=True),
+                _translate_inner(rhs),
+                best_cop,
             )
         return translate_value(expr)
 
@@ -284,7 +292,7 @@ def _translate_simple(expr: str, allow_chained: bool = False) -> str:
         parts = split_on_keyword(expr, vop)
         if parts:
             lhs, rhs = parts
-            return f'{translate_value(lhs)} {cop} {translate_value(rhs)}'
+            return _render_arith_expr(translate_value(lhs), translate_value(rhs), cop)
     return translate_value(expr)
 
 
@@ -340,22 +348,23 @@ def translate_expression(expr: str) -> str:
             _, core = _parse_quantity_clause(clauses[0])
             return _translate_quantity(core)
 
-        parts: list[str] = []
+        assembled: Optional[str] = None
         for i, clause in enumerate(clauses):
             op, core = _parse_quantity_clause(clause)
             c_group = _translate_quantity(core)
             if i == 0:
-                parts.append(c_group)
+                assembled = c_group
             else:
                 if op is None:
-                    parts.append(
+                    assembled = (
+                        f'{assembled} '
                         f'/* ERROR: missing operator before clause '
                         f'{i + 1}: {clause} */ {c_group}'
                     )
                 else:
-                    parts.append(f' {op} {c_group}')
+                    assembled = _render_arith_expr(assembled or '0', c_group, op)
 
-        return ''.join(parts)
+        return assembled or '0'
 
     return _translate_simple(expr)
 
