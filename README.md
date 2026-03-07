@@ -106,6 +106,15 @@ The `veritas-language/` folder contains a VS Code extension that provides:
 cp -r veritas-language ~/.vscode/extensions/
 ```
 
+or
+
+```bash
+cd veritas-language
+vsce package
+```
+
+Then install VSIX package in VS Code.
+
 Restart VS Code to activate.
 
 ---
