@@ -89,11 +89,25 @@ cd veritas
 **Compile a `.ver` file**
 
 ```bash
-bash veritasc.sh example.ver
-./example
+# Locally
+./veritas example.ver
+
+# Or after installing globally (see below)
+veritas example.ver
 ```
 
-`veritasc.sh` handles transpilation, linking with the `runtime.c` support file, and library detection in one step.
+### Global Installation
+
+To run `veritas` from anywhere:
+
+```bash
+sudo ln -s "$(pwd)/veritas" /usr/local/bin/veritas
+```
+
+Then you can simply run:
+```bash
+veritas example.ver
+```
 
 ---
 
@@ -136,7 +150,7 @@ Restart VS Code to activate.
 │   ├── frontend/            # Lexer and Parser
 │   ├── semantic/            # Semantic Analyzer and Symbol Table
 │   └── ir/                  # Intermediate Representation and Lowering
-├── veritasc.sh              # Build script (transpile + compile + link)
+├── veritas                  # Build script (transpile + compile + link)
 ├── examples/                # Example programs (finance, physics, math, statistics)
 ├── tests/                   # Compiler unit tests and error handling cases
 ├── .gitignore               # .gitignore (excludes binaries and .c files)

@@ -1,0 +1,420 @@
+#!/bin/bash
+
+# ---------------------------------------------------------------------------
+# veritas — compile a .ver source file to a native binary
+#
+# Usage:  veritas <file.ver>
+#
+# Automatically detects included libraries from the .ver source and maps
+# them to the correct gcc linker flags.
+# ---------------------------------------------------------------------------
+
+set -euo pipefail
+
+# Resolve the absolute path of the directory where this script is located
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
+
+if [[ $# -lt 1 ]]; then
+    echo "Usage: veritas <source.ver> [--tokens|--ast|--ir|--semantics]" >&2
+    exit 1
+fi
+
+source_file="$1"
+shift
+
+# Check if file exists
+if [[ ! -f "$source_file" ]]; then
+    echo "Error: File '$source_file' not found." >&2
+    exit 1
+fi
+
+debug_flags=()
+for arg in "$@"; do
+    case "$arg" in
+        --tokens|--ast|--ir|--semantics)
+            debug_flags+=("$arg")
+            ;;
+        *)
+            echo "Unknown flag: $arg" >&2
+            exit 1
+            ;;
+    esac
+done
+
+# Resolve names and paths
+filename=$(basename -- "$source_file" | sed 's/\.ver$//g')
+# Output stays in the current working directory by default, 
+# or we can put it next to the source file. 
+# User expected 'veritas example.ver' to just work.
+# Let's keep output in current directory for standard CLI behavior.
+output_base="./${filename}"
+
+# --- 1. Transpile .ver → .c ------------------------------------------------
+if [[ ${#debug_flags[@]} -gt 0 ]]; then
+    python3 "${SCRIPT_DIR}/vcparser.py" "$source_file" "${debug_flags[@]}"
+    exit 0
+fi
+
+python3 "${SCRIPT_DIR}/vcparser.py" "$source_file" > "${output_base}.c"
+
+# --- 2. Library → linker flag map ------------------------------------------
+declare -A LIB_MAP=(
+    ["stdio.h"]=""
+    ["stdlib.h"]=""
+    ["stdint.h"]=""
+    ["stddef.h"]=""
+    ["stdbool.h"]=""
+    ["stdarg.h"]=""
+    ["stdnoreturn.h"]=""
+    ["string.h"]=""
+    ["strings.h"]=""
+    ["ctype.h"]=""
+    ["wctype.h"]=""
+    ["wchar.h"]=""
+    ["locale.h"]=""
+    ["limits.h"]=""
+    ["float.h"]=""
+    ["assert.h"]=""
+    ["errno.h"]=""
+    ["signal.h"]=""
+    ["setjmp.h"]=""
+    ["time.h"]=""
+    ["inttypes.h"]=""
+    ["complex.h"]="-lm"
+    ["tgmath.h"]=""
+    ["fenv.h"]=""
+    ["iso646.h"]=""
+    ["stdalign.h"]=""
+    ["stdatomic.h"]=""
+    ["uchar.h"]=""
+    ["unistd.h"]=""
+    ["fcntl.h"]=""
+    ["sys/types.h"]=""
+    ["sys/stat.h"]=""
+    ["sys/wait.h"]=""
+    ["sys/mman.h"]=""
+    ["sys/ioctl.h"]=""
+    ["sys/socket.h"]=""
+    ["sys/select.h"]=""
+    ["sys/epoll.h"]=""
+    ["sys/eventfd.h"]=""
+    ["sys/signalfd.h"]=""
+    ["sys/timerfd.h"]=""
+    ["sys/resource.h"]=""
+    ["sys/utsname.h"]=""
+    ["sys/sysinfo.h"]=""
+    ["sys/ipc.h"]=""
+    ["sys/shm.h"]=""
+    ["sys/sem.h"]=""
+    ["sys/msg.h"]=""
+    ["sched.h"]=""
+    ["poll.h"]=""
+    ["dirent.h"]=""
+    ["glob.h"]=""
+    ["fnmatch.h"]=""
+    ["wordexp.h"]=""
+    ["getopt.h"]=""
+    ["pthread.h"]="-lpthread"
+    ["semaphore.h"]="-lpthread"
+    ["dl.h"]="-ldl"
+    ["dlfcn.h"]="-ldl"
+    ["aio.h"]="-lrt"
+    ["mqueue.h"]="-lrt"
+    ["syslog.h"]=""
+    ["math.h"]="-lm"
+    ["quadmath.h"]="-lquadmath -lm"
+    ["mpfr.h"]="-lmpfr -lgmp -lm"
+    ["mpc.h"]="-lmpc -lmpfr -lgmp -lm"
+    ["gmp.h"]="-lgmp"
+    ["flint/flint.h"]="-lflint -lgmp -lmpfr -lm"
+    ["arb.h"]="-larb -lflint -lgmp -lmpfr -lm"
+    ["isl/isl_val.h"]="-lisl"
+    ["cblas.h"]="-lcblas -lm"
+    ["openblas/cblas.h"]="-lopenblas -lm"
+    ["openblas/lapacke.h"]="-lopenblas -lm"
+    ["lapacke.h"]="-llapacke -llapack -lblas -lm"
+    ["lapack.h"]="-llapack -lblas -lm"
+    ["atlas/cblas.h"]="-lcblas -latlas -lm"
+    ["atlas/clapack.h"]="-llapack -lcblas -latlas -lm"
+    ["gsl/gsl_blas.h"]="-lgsl -lgslcblas -lm"
+    ["gsl/gsl_linalg.h"]="-lgsl -lgslcblas -lm"
+    ["gsl/gsl_matrix.h"]="-lgsl -lgslcblas -lm"
+    ["gsl/gsl_vector.h"]="-lgsl -lgslcblas -lm"
+    ["gsl/gsl_eigen.h"]="-lgsl -lgslcblas -lm"
+    ["gsl/gsl_permutation.h"]="-lgsl -lgslcblas -lm"
+    ["gsl/gsl_combination.h"]="-lgsl -lgslcblas -lm"
+    ["SuiteSparse_config.h"]="-lsuitesparseconfig -lm"
+    ["cholmod.h"]="-lcholmod -lamd -lcolamd -lcamd -lccolamd -lsuitesparseconfig -llapack -lblas -lm"
+    ["umfpack.h"]="-lumfpack -lamd -lsuitesparseconfig -lm"
+    ["amd.h"]="-lamd -lsuitesparseconfig -lm"
+    ["colamd.h"]="-lcolamd -lsuitesparseconfig -lm"
+    ["camd.h"]="-lcamd -lsuitesparseconfig -lm"
+    ["ccolamd.h"]="-lccolamd -lsuitesparseconfig -lm"
+    ["klu.h"]="-lklu -lamd -lcolamd -lsuitesparseconfig -lm"
+    ["ldl.h"]="-lldl -lsuitesparseconfig -lm"
+    ["btf.h"]="-lbtf -lsuitesparseconfig -lm"
+    ["rbio.h"]="-lrbio -lsuitesparseconfig -lm"
+    ["spqr.h"]="-lspqr -lcholmod -lsuitesparseconfig -llapack -lblas -lm"
+    ["GraphBLAS.h"]="-lgraphblas -lm"
+    ["f2c.h"]=""
+    ["FLAME.h"]="-lflame -lm"
+    ["magma.h"]="-lmagma -lmagma_sparse -lcublas -lcudart -lm"
+    ["magma_lapack.h"]="-lmagma -lcublas -lcudart -lm"
+    ["clBLAS.h"]="-lclBLAS -lOpenCL -lm"
+    ["eigen_c_api.h"]="-leigen_c_api -lm"
+    ["plasma.h"]="-lplasma -lcoreblas -llapacke -lopenblas -lm"
+    ["slu_ddefs.h"]="-lsuperlu -lm"
+    ["superlu/slu_ddefs.h"]="-lsuperlu -lm"
+    ["arpack/arpack.h"]="-larpack -llapack -lblas -lm"
+    ["primme.h"]="-lprimme -llapack -lblas -lm"
+    ["Faddeeva.h"]="-lm"
+    ["gsl/gsl_statistics.h"]="-lgsl -lgslcblas -lm"
+    ["gsl/gsl_statistics_double.h"]="-lgsl -lgslcblas -lm"
+    ["gsl/gsl_histogram.h"]="-lgsl -lgslcblas -lm"
+    ["gsl/gsl_fit.h"]="-lgsl -lgslcblas -lm"
+    ["gsl/gsl_multifit.h"]="-lgsl -lgslcblas -lm"
+    ["gsl/gsl_multifit_nlinear.h"]="-lgsl -lgslcblas -lm"
+    ["gsl/gsl_cdf.h"]="-lgsl -lgslcblas -lm"
+    ["gsl/gsl_randist.h"]="-lgsl -lgslcblas -lm"
+    ["gsl/gsl_rng.h"]="-lgsl -lgslcblas -lm"
+    ["gsl/gsl_qrng.h"]="-lgsl -lgslcblas -lm"
+    ["gsl/gsl_integration.h"]="-lgsl -lgslcblas -lm"
+    ["gsl/gsl_odeiv2.h"]="-lgsl -lgslcblas -lm"
+    ["gsl/gsl_interpolation.h"]="-lgsl -lgslcblas -lm"
+    ["gsl/gsl_spline.h"]="-lgsl -lgslcblas -lm"
+    ["gsl/gsl_roots.h"]="-lgsl -lgslcblas -lm"
+    ["gsl/gsl_min.h"]="-lgsl -lgslcblas -lm"
+    ["gsl/gsl_multimin.h"]="-lgsl -lgslcblas -lm"
+    ["gsl/gsl_permute.h"]="-lgsl -lgslcblas -lm"
+    ["gsl/gsl_sort.h"]="-lgsl -lgslcblas -lm"
+    ["gsl/gsl_wavelet.h"]="-lgsl -lgslcblas -lm"
+    ["gsl/gsl_fft_complex.h"]="-lgsl -lgslcblas -lm"
+    ["gsl/gsl_dft_complex.h"]="-lgsl -lgslcblas -lm"
+    ["gsl/gsl_chebyshev.h"]="-lgsl -lgslcblas -lm"
+    ["gsl/gsl_poly.h"]="-lgsl -lgslcblas -lm"
+    ["gsl/gsl_sf.h"]="-lgsl -lgslcblas -lm"
+    ["gsl/gsl_complex.h"]="-lgsl -lgslcblas -lm"
+    ["apop.h"]="-lapophenia -lgsl -lgslcblas -lsqlite3 -lm"
+    ["cephes.h"]="-lcephes -lm"
+    ["cdflib.h"]="-lcdflib -lm"
+    ["pari/pari.h"]="-lpari -lm"
+    ["dist.h"]="-ldist -lm"
+    ["Rmath.h"]="-lRmath -lm"
+    ["fftw3.h"]="-lfftw3 -lm"
+    ["fftw3f.h"]="-lfftw3f -lm"
+    ["fftw3l.h"]="-lfftw3l -lm"
+    ["fftw3q.h"]="-lfftw3q -lquadmath -lm"
+    ["fftpack.h"]="-lm"
+    ["kiss_fft.h"]="-lkissfft -lm"
+    ["pocketfft.h"]="-lm"
+    ["liquid/liquid.h"]="-lliquid -lm"
+    ["nlopt.h"]="-lnlopt -lm"
+    ["ipopt/IpStdCInterface.h"]="-lipopt -lm"
+    ["ceres/c_api.h"]="-lceres -lm"
+    ["glpk.h"]="-lglpk -lm"
+    ["coinor/Cbc_C_Interface.h"]="-lCbc -lCgl -lOsi -lClp -lCoinUtils -lm"
+    ["clp/Clp_C_Interface.h"]="-lClp -lCoinUtils -lm"
+    ["highs_c_api.h"]="-lhighs -lm"
+    ["osqp/osqp.h"]="-losqp -lm"
+    ["ecos.h"]="-lecos -lm"
+    ["scs.h"]="-lscs -lm"
+    ["daqp.h"]="-ldaqp -lm"
+    ["copt.h"]="-lcopt -lm"
+    ["cs.h"]="-lcxsparse -lm"
+    ["taucs.h"]="-ltaucs -llapack -lblas -lm"
+    ["pardiso.h"]="-lpardiso -lm"
+    ["superlu_dist.h"]="-lsuperlu_dist -llapack -lblas -lm"
+    ["pcg_basic.h"]="-lm"
+    ["mt19937ar.h"]="-lm"
+    ["randist.h"]="-lm"
+    ["dieharder.h"]="-ldieharder -lgsl -lgslcblas -lm"
+    ["Random123/philox.h"]="-lm"
+    ["hdf5.h"]="-lhdf5 -lm"
+    ["hdf5_hl.h"]="-lhdf5_hl -lhdf5 -lm"
+    ["netcdf.h"]="-lnetcdf -lm"
+    ["csv.h"]="-lcsv"
+    ["jansson.h"]="-ljansson"
+    ["json-c/json.h"]="-ljson-c"
+    ["cjson/cJSON.h"]="-lcjson"
+    ["yaml.h"]="-lyaml"
+    ["libxml/parser.h"]="-lxml2"
+    ["expat.h"]="-lexpat"
+    ["toml.h"]="-ltoml-c"
+    ["msgpack.h"]="-lmsgpack"
+    ["cbor.h"]="-lcbor"
+    ["arrow/c/abi.h"]="-larrow_c_bridge"
+    ["parquet.h"]="-lparquet -larrow -lm"
+    ["matio.h"]="-lmatio -lhdf5 -lm"
+    ["curl/curl.h"]="-lcurl"
+    ["zmq.h"]="-lzmq"
+    ["nanomsg/nn.h"]="-lnanomsg"
+    ["nng/nng.h"]="-lnng"
+    ["rdkafka/rdkafka.h"]="-lrdkafka"
+    ["mosquitto.h"]="-lmosquitto"
+    ["uv.h"]="-luv"
+    ["event.h"]="-levent"
+    ["ev.h"]="-lev"
+    ["resolv.h"]="-lresolv"
+    ["ldap.h"]="-lldap -llber"
+    ["grpc/grpc.h"]="-lgrpc"
+    ["zlib.h"]="-lz"
+    ["bzlib.h"]="-lbz2"
+    ["lzma.h"]="-llzma"
+    ["lz4.h"]="-llz4"
+    ["lz4frame.h"]="-llz4"
+    ["zstd.h"]="-lzstd"
+    ["snappy-c.h"]="-lsnappy"
+    ["blosc.h"]="-lblosc"
+    ["brotli/decode.h"]="-lbrotlidec"
+    ["brotli/encode.h"]="-lbrotlienc"
+    ["archive.h"]="-larchive"
+    ["zip.h"]="-lzip"
+    ["openssl/ssl.h"]="-lssl -lcrypto"
+    ["openssl/crypto.h"]="-lcrypto"
+    ["openssl/sha.h"]="-lcrypto"
+    ["openssl/evp.h"]="-lcrypto"
+    ["openssl/rsa.h"]="-lcrypto"
+    ["openssl/aes.h"]="-lcrypto"
+    ["openssl/hmac.h"]="-lcrypto"
+    ["gnutls/gnutls.h"]="-lgnutls"
+    ["nettle/sha2.h"]="-lnettle"
+    ["nettle/aes.h"]="-lnettle"
+    ["nettle/hmac.h"]="-lhogweed -lnettle -lgmp"
+    ["gcrypt.h"]="-lgcrypt -lgpg-error"
+    ["sodium.h"]="-lsodium"
+    ["blake3.h"]="-lblake3"
+    ["xxhash.h"]="-lxxhash"
+    ["b2/blake2.h"]="-lb2"
+    ["unicode/ustring.h"]="-licuuc -licudata"
+    ["unicode/ucol.h"]="-licui18n -licuuc -licudata"
+    ["pcre.h"]="-lpcre"
+    ["pcre2.h"]="-lpcre2-8"
+    ["regex.h"]=""
+    ["tre/tre.h"]="-ltre"
+    ["oniguruma.h"]="-lonig"
+    ["glib-2.0/glib.h"]="-lglib-2.0"
+    ["iconv.h"]=""
+    ["tz.h"]="-ltz"
+    ["ncurses.h"]="-lncurses"
+    ["curses.h"]="-lcurses"
+    ["panel.h"]="-lpanel -lncurses"
+    ["form.h"]="-lform -lncurses"
+    ["menu.h"]="-lmenu -lncurses"
+    ["readline/readline.h"]="-lreadline"
+    ["histedit.h"]="-ledit"
+    ["termios.h"]=""
+    ["GL/gl.h"]="-lGL"
+    ["GL/glu.h"]="-lGLU"
+    ["GL/glew.h"]="-lGLEW -lGL"
+    ["GL/glut.h"]="-lglut -lGL -lGLU"
+    ["GLFW/glfw3.h"]="-lglfw -lGL -lm"
+    ["vulkan/vulkan.h"]="-lvulkan"
+    ["png.h"]="-lpng -lz -lm"
+    ["jpeglib.h"]="-ljpeg"
+    ["tiff.h"]="-ltiff"
+    ["webp/decode.h"]="-lwebp"
+    ["webp/encode.h"]="-lwebp"
+    ["FreeImage.h"]="-lFreeImage"
+    ["cairo/cairo.h"]="-lcairo"
+    ["pango/pango.h"]="-lpango-1.0 -lglib-2.0"
+    ["rsvg.h"]="-lrsvg-2 -lcairo -lglib-2.0"
+    ["MagickCore/MagickCore.h"]="-lMagickCore-7.Q16"
+    ["plplot/plplot.h"]="-lplplot -lm"
+    ["gnuplot_i.h"]="-lm"
+    ["portaudio.h"]="-lportaudio -lm"
+    ["sndfile.h"]="-lsndfile"
+    ["ao/ao.h"]="-lao"
+    ["mpg123.h"]="-lmpg123"
+    ["vorbis/vorbisfile.h"]="-lvorbisfile -lvorbis -logg"
+    ["FLAC/stream_decoder.h"]="-lFLAC"
+    ["opus/opus.h"]="-lopus -lm"
+    ["sqlite3.h"]="-lsqlite3"
+    ["postgresql/libpq-fe.h"]="-lpq"
+    ["libpq-fe.h"]="-lpq"
+    ["mysql/mysql.h"]="-lmysqlclient -lm"
+    ["mariadb/mysql.h"]="-lmariadb"
+    ["mongoc/mongoc.h"]="-lmongoc-1.0 -lbson-1.0"
+    ["bson/bson.h"]="-lbson-1.0"
+    ["lmdb.h"]="-llmdb"
+    ["leveldb/c.h"]="-lleveldb"
+    ["rocksdb/c.h"]="-lrocksdb"
+    ["redis/hiredis.h"]="-lhiredis"
+    ["hiredis/hiredis.h"]="-lhiredis"
+    ["omp.h"]=""
+    ["mpi.h"]="-lmpi"
+    ["mpi/mpi.h"]="-lmpi"
+    ["opencl/opencl.h"]="-lOpenCL"
+    ["CL/cl.h"]="-lOpenCL"
+    ["cuda_runtime.h"]="-lcudart"
+    ["cublas_v2.h"]="-lcublas"
+    ["cusolver.h"]="-lcusolver"
+    ["cusparse.h"]="-lcusparse"
+    ["tbb/tbb.h"]="-ltbb"
+    ["dispatch/dispatch.h"]="-ldispatch"
+    ["ucontext.h"]=""
+    ["gperftools/profiler.h"]="-lprofiler"
+    ["gperftools/heap-profiler.h"]="-ltcmalloc"
+    ["jemalloc/jemalloc.h"]="-ljemalloc"
+    ["mimalloc.h"]="-lmimalloc"
+    ["backtrace.h"]="-lbacktrace"
+    ["execinfo.h"]=""
+    ["elfutils/libdw.h"]="-ldw"
+    ["libunwind.h"]="-lunwind"
+    ["bfd.h"]="-lbfd -liberty"
+    ["glib-2.0/glib/ghash.h"]="-lglib-2.0"
+    ["glib-2.0/glib/glist.h"]="-lglib-2.0"
+    ["gio/gio.h"]="-lgio-2.0 -lgobject-2.0 -lglib-2.0"
+    ["gobject/gobject.h"]="-lgobject-2.0 -lglib-2.0"
+    ["cunit/CUnit.h"]="-lcunit"
+    ["check.h"]="-lcheck -lpthread -lm"
+    ["criterion/criterion.h"]="-lcriterion"
+    ["cmocka.h"]="-lcmocka"
+    ["unity.h"]="-lm"
+    ["c-algorithms/list.h"]="-lc-algorithms"
+    ["gc.h"]="-lgc"
+    ["talloc.h"]="-ltalloc"
+    ["apr-1/apr_general.h"]="-lapr-1"
+    ["cffi.h"]="-lffi"
+    ["ffi.h"]="-lffi"
+    ["lua.h"]="-llua -lm -ldl"
+    ["lauxlib.h"]="-llua -lm -ldl"
+    ["python3.11/Python.h"]="-lpython3.11 -lm -ldl"
+    ["python3.12/Python.h"]="-lpython3.12 -lm -ldl"
+    ["tcl.h"]="-ltcl"
+    ["guile/guile.h"]="-lguile-3.0 -lgc -lm"
+    ["libconfig.h"]="-lconfig"
+    ["ini.h"]="-lm"
+    ["argp.h"]=""
+    ["popt.h"]="-lpopt"
+    ["cargs.h"]="-lcargs"
+    ["linenoise.h"]="-lm"
+)
+
+# --- 3. Scan .ver source and collect flags ---------------------------------
+
+declare -A seen_flags   # deduplicate
+linker_flags=()
+
+for header in "${!LIB_MAP[@]}"; do
+    flag_str="${LIB_MAP[$header]}"
+    [[ -z "$flag_str" ]] && continue
+
+    if grep -qF "Include the library '${header}'" "$source_file" || \
+       grep -qF "Include the header '${header}'" "$source_file"; then
+        read -ra tokens <<< "$flag_str"
+        for tok in "${tokens[@]}"; do
+            if [[ -z "${seen_flags[$tok]+set}" ]]; then
+                seen_flags[$tok]=1
+                linker_flags+=("$tok")
+            fi
+        done
+    fi
+done
+
+# --- 4. Compile ------------------------------------------------------------
+
+echo "gcc linker flags: ${linker_flags[*]:-<none>}"
+gcc -o "${output_base}" "${output_base}.c" "${SCRIPT_DIR}/compiler/runtime.c" "${linker_flags[@]+"${linker_flags[@]}"}" -lm
+
+# --- 5. Clean up -----------------------------------------------------------
+rm "${output_base}.c"

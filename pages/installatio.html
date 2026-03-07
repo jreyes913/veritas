@@ -154,6 +154,15 @@ cd veritas</code></pre>
 
   <section class="section">
     <p class="section-number">§ III</p>
+    <h2>Global Installation</h2>
+    <p>To run the <code>veritas</code> command from any directory, create a symbolic link in <code>/usr/local/bin</code>:</p>
+    <pre><code>sudo ln -s "$(pwd)/veritas" /usr/local/bin/veritas</code></pre>
+    <p>Now you can compile any file using:</p>
+    <pre><code>veritas example.ver</code></pre>
+  </section>
+
+  <section class="section">
+    <p class="section-number">§ IV</p>
     <h2>VS Code Extension</h2>
     <p>For the best development experience, install the provided VS Code extension for syntax highlighting and file icons.</p>
     <pre><code>cp -r veritas-language ~/.vscode/extensions/</code></pre>
