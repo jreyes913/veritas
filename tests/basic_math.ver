@@ -1,5 +1,5 @@
 This is the program 'basic_math'.
 Create 'x' as an int with value 2.
 Create 'y' as an int with value 3.
-Create 'sum' as an int with value the quantity x plus y.
+Create 'sum' as an int with value the quantity 'x' plus 'y'.
 End of the program 'basic_math'.

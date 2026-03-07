@@ -41,6 +41,10 @@ xdg-open REGULA.html    # Linux
 start REGULA.html       # Windows
 ```
 
+Or view it at GitHub Pages:
+
+[https://jreyes913.github.io/veritas/REGULA.html](https://jreyes913.github.io/veritas/REGULA.html)
+
 ---
 
 
@@ -74,8 +78,8 @@ arena_destroy(&arena);
 **Clone the repo**
 
 ```bash
-git clone https://github.com/<your-username>/<repo-name>.git
-cd <repo-name>
+git clone https://github.com/jreyes913/veritas.git
+cd veritas
 ```
 
 **Compile a `.ver` file**

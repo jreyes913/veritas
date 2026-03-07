@@ -1,5 +1,5 @@
 This is the program 'float_math'.
 Create 'a' as an int with value 2.
 Create 'b' as a float with value 3.5.
-Create 'mix' as a float with value the quantity a plus b.
+Create 'mix' as a float with value the quantity 'a' plus 'b'.
 End of the program 'float_math'.
