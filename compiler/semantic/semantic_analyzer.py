@@ -176,6 +176,12 @@ class SemanticAnalyzer:
 
         if expr.startswith('strcmp(') and expr.endswith(')') or 'strcmp(' in expr:
             return 'int'
+
+        pow_args = self._split_pow_args(expr)
+        if pow_args is not None:
+            left_type = self._infer_expr_type(pow_args[0], context=context)
+            right_type = self._infer_expr_type(pow_args[1], context=context)
+            return self._binary_result_type(left_type, right_type, context)
         
         if expr == '_Complex_I' or re.fullmatch(r'(\d+\.?\d*|\.\d+)j', expr):
             return 'double complex'
@@ -252,6 +258,9 @@ class SemanticAnalyzer:
             # Look for Veritas-style multiplied/divided
             arith_match = find_top_level_op(r'\s(multiplied by|divided by)\s', expr)
 
+        if not arith_match:
+            arith_match = find_top_level_op(r'\s(raised to the)\s', expr)
+
         if arith_match:
             left = expr[:arith_match.start()].strip()
             right = expr[arith_match.end():].strip()
@@ -295,6 +304,32 @@ class SemanticAnalyzer:
         if ctype is None:
             raise SemanticError(f"Undefined variable '{expr}'")
         return ctype
+
+    def _split_pow_args(self, expr: str) -> tuple[str, str] | None:
+        if not (expr.startswith('pow(') and expr.endswith(')')):
+            return None
+
+        inner = expr[4:-1].strip()
+        depth = 0
+        in_dquote = False
+        in_squote = False
+        for i, ch in enumerate(inner):
+            if ch == '"' and not in_squote:
+                in_dquote = not in_dquote
+            elif ch == "'" and not in_dquote:
+                in_squote = not in_squote
+            elif not in_dquote and not in_squote:
+                if ch == '(':
+                    depth += 1
+                elif ch == ')':
+                    depth -= 1
+                elif ch == ',' and depth == 0:
+                    left = inner[:i].strip()
+                    right = inner[i + 1:].strip()
+                    if left and right:
+                        return left, right
+                    return None
+        return None
 
     def _binary_result_type(self, left: str, right: str, context: str) -> str:
         if left == 'string' and right == 'string':
