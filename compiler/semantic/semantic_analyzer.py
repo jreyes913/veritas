@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import re
+import sys
+from typing import Optional
 
 from compiler.semantic.symbol_table import SymbolTable
 
@@ -54,6 +56,8 @@ class SemanticAnalyzer:
         'sample_normal': 'double',
         'sample_uniform': 'double',
         'sample_poisson': 'double',
+        'matrix_get_column': 'double*',
+        'matrix_get_column_idx': 'double*',
         # Linear Algebra
         'solve_linear_system': 'void',
         'matrix_multiply': 'void',
@@ -126,6 +130,8 @@ class SemanticAnalyzer:
                 self._handle_assign(node)
             elif kind == 'call':
                 self._handle_call(node)
+            elif kind == 'load':
+                self._handle_load(node, scope)
             elif kind == 'if':
                 self._infer_expr_type(node.get('condition', ''), context='if condition')
                 self._push_scope()
@@ -209,9 +215,12 @@ class SemanticAnalyzer:
         
         for arg in node.get('args', []):
             arg = arg.strip()
-            # If the parser didn't perfectly clean 'and' in some cases
-            if arg.lower().startswith('and '):
-                arg = arg[4:].strip()
+            def _clean_and(s: str) -> str:
+                if s.lower().startswith('and ') and s.count('"') % 2 == 0:
+                    m = re.match(r'^and\s+(.+)', s, re.IGNORECASE)
+                    return m.group(1).strip() if m else s
+                return s
+            arg = _clean_and(arg)
             self._infer_expr_type(arg, context=f"argument to '{func_name}'")
         
         dest = node.get('dest')
@@ -223,6 +232,12 @@ class SemanticAnalyzer:
                 ret_type = self.BLESSED_FUNCTIONS[func_name]
                 if ret_type != 'void':
                     self._assert_assignable(dest_type, ret_type, f"result of '{func_name}'")
+
+    def _handle_load(self, node: dict, scope: str) -> None:
+        name = node['name'].replace('\x00', ' ').strip()
+        if name.startswith("'") and name.endswith("'"):
+            name = name[1:-1]
+        self._define(name, 'matrix', scope)
 
     def _infer_target_type(self, target: str) -> str:
         target = target.strip()
@@ -254,7 +269,8 @@ class SemanticAnalyzer:
         return ctype
 
     def _infer_expr_type(self, expr: str, context: str = 'expression') -> str:
-        expr = expr.strip()
+        # Unprotect null bytes if present from legacy parser protection
+        expr = expr.replace('\x00', ' ').strip()
         if not expr:
             return 'void'
 
@@ -272,6 +288,8 @@ class SemanticAnalyzer:
                 expr = expr[1:-1].strip()
             else:
                 break
+
+        if not expr: return 'void'
 
         pow_args = self._split_pow_args(expr)
         if pow_args:
@@ -420,11 +438,7 @@ class SemanticAnalyzer:
             return ctype
 
         if expr.startswith("'") and expr.endswith("'"):
-            name = expr[1:-1]
-            ctype = self._lookup(name)
-            if ctype is None:
-                raise SemanticError(f"Undefined variable '{expr}'")
-            return ctype
+            expr = expr[1:-1].strip()
 
         ctype = self._lookup(expr)
         if ctype is None:
@@ -507,7 +521,14 @@ class SemanticAnalyzer:
         if self._container_of(left) == 'array' or self._container_of(right) == 'array':
             return left == right
 
-        if self._container_of(left) == 'vector' or self._container_of(right) == 'vector':
+        if self._container_of(left) == 'vector' and self._container_of(right) == 'scalar':
+            # Allow assigning T* to vector<T> (runtime return of pointers to data)
+            if left.endswith(f'<{right.rstrip("*")}>'):
+                return True
+            if right.endswith('*') and left.startswith('vector<') and left.endswith('>'):
+                 inner = left[7:-1].strip()
+                 if right[:-1].strip() == inner:
+                     return True
             return left == right
 
         return self._is_numeric_type(left) and self._is_numeric_type(right)

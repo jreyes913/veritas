@@ -17,7 +17,8 @@ _STARTERS = re.compile(
     r'Otherwise'             r'|'
     r'End if'                r'|'
     r'Replace '              r'|'
-    r'Call '
+    r'Call '                 r'|'
+    r'Load '
     r')'
 )
 

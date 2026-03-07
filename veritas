@@ -43,11 +43,8 @@ done
 
 # Resolve names and paths
 filename=$(basename -- "$source_file" | sed 's/\.ver$//g')
-# Output stays in the current working directory by default, 
-# or we can put it next to the source file. 
-# User expected 'veritas example.ver' to just work.
-# Let's keep output in current directory for standard CLI behavior.
-output_base="./${filename}"
+output_dir=$(dirname -- "$(realpath "$source_file")")
+output_base="${output_dir}/${filename}"
 
 # --- 1. Transpile .ver → .c ------------------------------------------------
 if [[ ${#debug_flags[@]} -gt 0 ]]; then

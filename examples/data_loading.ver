@@ -1,0 +1,44 @@
+This is the program 'data_loading_demo'.
+
+/* Load data from CSV as a matrix */
+Load 'my_data' from "data.csv" as a matrix.
+
+/* Extract columns as vectors (similar to Pandas) */
+Create 'values' as a double vector of size 5.
+Call 'matrix_get_column' with 'my_data' and "value" stored to 'values'.
+
+Create 'factors' as a double vector of size 5.
+Call 'matrix_get_column' with 'my_data' and "factor" stored to 'factors'.
+
+/* Use the extracted data for analysis */
+Create 'avg_val' as a double.
+Create 'std_val' as a double.
+Call 'mean' with 'values' and 5 stored to 'avg_val'.
+Call 'standard_deviation' with 'values' and 5 stored to 'std_val'.
+
+Call 'printf' with "Loaded 5 rows. Mean value: %.2f, StdDev: %.2f\n" and 'avg_val' and 'std_val' stored to nothing.
+
+/* Vector math on extracted columns */
+Create 'results' as a double vector of size 5.
+
+Create 'i' as an int.
+Create 'v' as a double.
+Create 'f' as a double.
+Create 'res' as a double.
+
+For every iteration of 'i' from 0 to 5:
+    Replace 'v' with an element of 'values' at index 'i'.
+    Replace 'f' with an element of 'factors' at index 'i'.
+    Replace 'res' with the quantity 'v' multiplied by 'f'.
+    Replace 'results' at index 'i' with 'res'.
+End iteration of 'i' from 0 to 5.
+
+Create 'r0' as a double.
+Replace 'r0' with an element of 'results' at index 0.
+Call 'printf' with "First result (value * factor): %.2f\n" and 'r0' stored to nothing.
+
+/* Binary loading example - conceptual demo */
+/* In a real scenario, we'd have a .bin file with raw doubles.
+   Load 'bin_data' from "data.bin" as bin matrix with size 10 by 3. */
+
+End of the program 'data_loading_demo'.

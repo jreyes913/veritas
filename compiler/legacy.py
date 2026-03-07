@@ -413,51 +413,44 @@ def _unprotect(s: str) -> str:
 
 
 def parse_argument_list(raw: str) -> list[str]:
-    """
-    Parse a comma / 'and'-separated Veritas argument list with strict rules:
-    - 1 item: 'X'
-    - 2 items: 'X and Y' (NO COMMAS)
-    - 3+ items: 'X, Y, and Z' (Oxford comma required)
-    """
     raw = raw.strip()
-    if not raw:
-        return []
+    if not raw: return []
 
-    # Handle 1 item (no commas, no 'and')
-    if ',' not in raw and not re.search(r'\band\b', raw, re.IGNORECASE):
-        return [raw]
-
-    # Handle 2 items (no commas, exactly one 'and')
-    if ',' not in raw:
-        and_parts = re.split(r'\s+and\s+', raw, flags=re.IGNORECASE)
-        if len(and_parts) == 2:
-            return [p.strip() for p in and_parts]
+    # 1. Identify all split positions (commas or 'and') outside quotes
+    splits = []
+    in_dq = False
+    i = 0
+    while i < len(raw):
+        if raw[i] == '"':
+            in_dq = not in_dq
+            i += 1
+        elif not in_dq:
+            if raw[i] == ',':
+                splits.append((i, i+1))
+                i += 1
+            elif raw[i:i+5].lower() == ' and ':
+                splits.append((i, i+5))
+                i += 5
+            else:
+                i += 1
         else:
-            # Maybe it's a 3+ item list missing commas? Or malformed.
-            pass
-
-    # Check for 2-item list with comma violation: "X, and Y"
-    if raw.count(',') == 1:
-        parts = [p.strip() for p in raw.split(',')]
-        if len(parts) == 2 and re.match(r'^and\s+', parts[1], re.IGNORECASE):
-            warn(f"Grammar violation: 2-item list should not have a comma: {raw}")
-            parts[1] = re.sub(r'^and\s+', '', parts[1], flags=re.IGNORECASE).strip()
-            return parts
-
-    # Handle 3+ items (must have commas and 'and' for the last element)
-    parts = [p.strip() for p in raw.split(',')]
-    if len(parts) < 3:
-        # If we got here and parts < 3, it's likely a malformed 2-item list
-        return parts
-
-    last_part = parts[-1]
-    m_and = re.match(r'^and\s+(.+)', last_part, re.IGNORECASE)
-    if not m_and:
-        warn(f"Strict list violation: last element must start with 'and': {raw}")
-        return [p.strip() for p in parts]
+            i += 1
     
-    parts[-1] = m_and.group(1).strip()
-    return parts
+    # 2. Extract parts
+    parts = []
+    last_idx = 0
+    for start, end in splits:
+        parts.append(raw[last_idx:start].strip())
+        last_idx = end
+    parts.append(raw[last_idx:].strip())
+    
+    # 3. Cleanup: remove empty parts and leading 'and' just in case
+    def _clean(s: str) -> str:
+        s = s.strip()
+        m = re.match(r'^and\s+(.+)', s, re.IGNORECASE)
+        return m.group(1).strip() if m else s
+
+    return [_clean(p) for p in parts if p]
 
 
 # ===========================================================================
@@ -490,7 +483,7 @@ class Parser:
         self._main_scope: list[ASTNode] = self._module['main']
 
     def feed(self, stmt: str) -> None:
-        s = strip_terminal_period(stmt.strip())
+        s = _unprotect(strip_terminal_period(stmt.strip()))
         self._dispatch(s)
 
     def ast(self) -> ASTNode:
@@ -573,23 +566,23 @@ class Parser:
             self._end_if()
             return
 
-        m = re.match(r"Replace (.+?) at index (.+?) with (.+)$", s)
+        m = re.match(r"Replace (.+?) at index (.+?) with (.+)$", s, re.IGNORECASE)
         if m:
             target = translate_value(m.group(1))
             idx = translate_value(m.group(2))
             self._current_scope().append({
                 'kind':   'assign',
                 'target': f'{target}[{idx}]',
-                'value':  _translate_simple(m.group(3).strip(), allow_chained=True),
+                'value':  translate_expression(m.group(3).strip()),
             })
             return
 
-        m = re.match(r"Replace (.+?) with (.+)$", s)
+        m = re.match(r"Replace (.+?) with (.+)$", s, re.IGNORECASE)
         if m:
             self._current_scope().append({
                 'kind':   'assign',
                 'target': translate_value(m.group(1)),
-                'value':  _translate_simple(m.group(2).strip(), allow_chained=True),
+                'value':  translate_expression(m.group(2).strip()),
             })
             return
 
@@ -597,8 +590,31 @@ class Parser:
             self._handle_call(s)
             return
 
-        self._current_scope().append(
-            {'kind': 'error', 'message': 'unrecognised statement', 'raw': s})
+        if s.startswith('Load '):
+            self._handle_load(s)
+            return
+
+        self._current_scope().append({
+            'kind': 'error',
+            'message': 'unrecognized instruction',
+            'raw': s,
+        })
+
+    def _handle_load(self, s: str) -> None:
+        # Load 'XYZ' from "filepath" as a matrix.
+        m = re.match(r"Load '(.+?)' from \"([^\"]+)\" as a? (matrix|bin matrix)(?: with size (\d+) by (\d+))?$", s, re.IGNORECASE)
+        if m:
+            name, path, kind, rows, cols = m.groups()
+            self._current_scope().append({
+                'kind': 'load',
+                'name': name,
+                'path': path,
+                'type': kind.lower(),
+                'rows': int(rows) if rows else None,
+                'cols': int(cols) if cols else None
+            })
+        else:
+            self._emit_error("malformed Load statement", s)
 
     def _current_scope(self) -> list[ASTNode]:
         return self._scope_stack[-1]
@@ -814,7 +830,7 @@ class Parser:
     def _handle_call(self, s: str) -> None:
         m = re.match(
             r"Call '(\w+)'(?:\s+with\s+(.*?))?\s*,?\s*stored to\s+(.+)$",
-            s, re.DOTALL)
+            s, re.DOTALL | re.IGNORECASE)
         if not m:
             self._current_scope().append(
                 {'kind': 'error', 'message': 'malformed Call', 'raw': s})
@@ -868,7 +884,7 @@ class CodeGen:
     def generate(self, module: ASTNode) -> str:
         self._scan_triggers(module)
         self._gen_includes(module['includes'])
-        self._gen_globals(module['globals'])
+        self._gen_globals(module['globals'], module)
         self._gen_functions(module['functions'])
         self._gen_main(module['main'])
         return self._render()
@@ -944,6 +960,10 @@ class CodeGen:
         required.update(self.triggered_includes)
         
         self.includes.extend([f'#include <{h}>' for h in sorted(required)])
+        
+        # Veritas Internal Structures
+        self.includes.append('\ntypedef struct { double* data; int rows; int cols; char** column_names; } Matrix;')
+        
         seen = required
         for node in nodes:
             path = node['path']
@@ -951,9 +971,18 @@ class CodeGen:
                 self.includes.append(f'#include <{path}>')
                 seen.add(path)
 
-    def _gen_globals(self, nodes: list[ASTNode]) -> None:
+    def _gen_globals(self, nodes: list[ASTNode], module: ASTNode) -> None:
         for node in nodes:
             self.globals.append(self._global_decl_c(node))
+        
+        # Also check main for Load statements that need global Matrix pointers
+        for node in module['main']:
+            if node['kind'] == 'load':
+                name = node['name']
+                if name not in self._global_vars:
+                    self._global_vars.add(name)
+                    self.globals.append(f'Matrix *{name};')
+                    self.global_inits.append(f'{name} = NULL;')
 
     def _gen_functions(self, nodes: list[ASTNode]) -> None:
         for func in nodes:
@@ -1003,17 +1032,44 @@ class CodeGen:
                     return [
                         f'{pad}for (int {ln} = 0; {ln} < {v_size}; {ln}++) {{ {target}[{ln}] = {v1}[{ln}] {op} {v2}[{ln}]; }}'
                     ]
+                
+                # If it's a simple assignment to a vector (not arithmetic), handle it
+                # but ONLY if it's not already indexed.
+                if '[' not in target:
+                    target_c = self._rewrite_expr(target, scalars)
+                    # For vector = pointer, we need to be careful with dereferencing.
+                    # _rewrite_expr might add a '*' to target if it thinks it's a scalar.
+                    # Let's manually handle it.
+                    value_c = self._rewrite_expr(value, scalars)
+                    return [f'{pad}{target} = {value_c};']
             
             target_c = self._rewrite_expr(target, scalars)
             value_c = self._rewrite_expr(value, scalars)
             return [f'{pad}{target_c} = {value_c};']
 
         if kind == 'call':
-            args_str = ', '.join(self._rewrite_expr(arg, scalars) for arg in node['args'])
+            def _clean_and(s: str) -> str:
+                if s.lower().startswith('and ') and s.count('"') % 2 == 0:
+                    m = re.match(r'^and\s+(.+)', s, re.IGNORECASE)
+                    return m.group(1).strip() if m else s
+                return s
+            args_str = ', '.join(self._rewrite_expr(_clean_and(arg), scalars) for arg in node['args'])
             call = f'{node["func"]}({args_str})'
             if node['dest'] is None:
                 return [f'{pad}{call};']
             return [f'{pad}{self._rewrite_expr(node["dest"], scalars)} = {call};']
+
+        if kind == 'load':
+            name = node['name']
+            path = node['path']
+            typ = node['type']
+            if typ == 'matrix':
+                return [f'{pad}{name} = matrix_load_csv("{path}");']
+            elif typ == 'bin matrix':
+                rows = node.get('rows', 0)
+                cols = node.get('cols', 0)
+                return [f'{pad}{name} = matrix_load_bin("{path}", {rows}, {cols});']
+            return [f'{pad}/* Unknown load type: {typ} */']
 
         if kind == 'for':
             # inclusive means 'through' -> <=, exclusive means 'to' -> <
@@ -1080,7 +1136,7 @@ class CodeGen:
             return ' '.join(lines)
 
         if container == 'matrix':
-            decl = f'void *{name}' if not is_global else name
+            decl = f'Matrix *{name}' if not is_global else name
             return f'{decl} = NULL; /* Matrix runtime object */'
 
         scalar_vars.add(name)
@@ -1102,7 +1158,7 @@ class CodeGen:
 
         if container == 'matrix':
             self.global_inits.append(f'{name} = NULL;')
-            return f'void *{name};'
+            return f'Matrix *{name};'
 
         self._main_scalars.add(name)
         if node['init'] is None:
@@ -1116,8 +1172,12 @@ class CodeGen:
 
     def _arena_ref(self) -> str:
         return 'global_arena' if self._in_function else '&arena'
-
     def _rewrite_expr(self, expr: str, scalar_vars: set[str]) -> str:
+        # Final cleanup of any lingering 'and ' if this is a raw argument string
+        m_and = re.match(r'^and\s+(.+)', expr.strip(), re.IGNORECASE)
+        if m_and:
+            expr = m_and.group(1).strip()
+
         # String concatenation heuristic: if we see ' + ' and it looks like strings
         if ' + ' in expr and ('"' in expr or any(v in expr for v in scalar_vars)):
              # This is a bit fragile without a full type-aware rewriter
@@ -1264,6 +1324,10 @@ class CodeGen:
             'void vector_mul(double complex* a, double complex* b, double complex* out, int size);',
             'void vector_mul_scalar(double complex* a, double complex scalar, double complex* out, int size);',
             'void matrix_multiply(double* a, double* b, int rows_a, int cols_a, int cols_b, double* out);',
+            'Matrix* matrix_load_csv(const char* filepath);',
+            'Matrix* matrix_load_bin(const char* filepath, int rows, int cols);',
+            'double* matrix_get_column(Matrix* mat, const char* col_name);',
+            'double* matrix_get_column_idx(Matrix* mat, int col_idx);',
             'void invert_matrix(double* a, int n, double* out);',
             'double determinant(double* a, int n);',
             'double trace(double* a, int n);',

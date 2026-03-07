@@ -41,6 +41,12 @@ def _fmt_nodes(nodes: list[dict], indent: int) -> list[str]:
             args = f" with {', '.join(n['args'])}" if n['args'] else ''
             dest = n['dest'] if n['dest'] is not None else 'nothing'
             out.append(pad + f"Call '{n['func']}'{args} and save the result to {dest}.")
+        elif k == 'load':
+            typ = n['type']
+            if typ == 'bin matrix':
+                out.append(pad + f"Load '{n['name']}' from \"{n['path']}\" as bin matrix with size {n['rows']} by {n['cols']}.")
+            else:
+                out.append(pad + f"Load '{n['name']}' from \"{n['path']}\" as matrix.")
         elif k == 'for':
             bound = 'through' if n['inclusive'] else 'to'
             out.append(pad + f"For every iteration of '{n['var']}' from {n['start']} {bound} {n['end']}")
