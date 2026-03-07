@@ -1,0 +1,23 @@
+This is the program 'physics_simulation'.
+
+/* Model an object falling in gravity */
+Create 'g' as a double with value 9.81.
+Create 't' as a double with value 0.0.
+Create 'dt' as a double with value 0.1.
+Create 'height' as a double with value 100.0.
+Create 'velocity' as a double with value 0.0.
+
+/* Simulate until object hits the ground */
+For every iteration of 'step' from 1 to 100:
+    If 'height' is greater than 0.0:
+        Replace 'velocity' with 'velocity' plus 'g' multiplied by 'dt'.
+        Replace 'height' with 'height' minus 'velocity' multiplied by 'dt'.
+        Replace 't' with 't' plus 'dt'.
+        Call 'printf' with "Time: %.1fs, Height: %.2fm\n", 't', and 'height' stored to nothing.
+    Otherwise:
+        Call 'printf' with "Object hit ground!\n" stored to nothing.
+        /* Early exit conceptually; in this DSL, we continue but skip the 'If' block */
+    End if 'height' is greater than 0.0.
+End iteration of 'step' from 1 to 100.
+
+End of the program 'physics_simulation'.

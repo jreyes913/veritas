@@ -1,20 +1,31 @@
-# Veritas (v1.1.0)
+# Veritas (v1.2.0)
 
 > *A programming language designed to resemble clear, structured human English while remaining deterministic and easy to parse.*
 
 Veritas compiles `.ver` source files to C via a Python transpiler (`vcparser.py`). Programs read like well-structured English instructions — every statement follows strict grammatical rules that map unambiguously to C output.
 
-Version 1.1.0 introduces significant improvements to the type system and expression parsing, including multi-word C types, pointer syntax, and complex arithmetic through quantity grouping.
+Version 1.2.0 introduces first-class managed strings, an intelligent prelude system, and built-in support for industry-standard scientific libraries.
+
+---
+
+## Development Disclaimer
+
+**Veritas** is the creation of a single designer who is an Electrical and Mechanical Engineer (EE/ME) by trade, rather than a computer scientist. While the language's core philosophy, syntax rules, and architectural structure were designed solely by the creator, an **AI agentic workflow** was utilized extensively to implement the Python-based parser and transpiler logic. This collaboration allowed for the rapid realization of a domain-specific language tailored for researchers and engineers.
 
 ---
 
 ## Key Features
 
 - **Natural Syntax**: Statements like `Create 'x' as an integer with value 10.`
-- **Direct C Interop**: Use any C type directly (e.g., `double complex`, `uint32_t`).
-- **Pointer Support**: First-class support for addresses and pointer dereferencing.
-- **Quantity Expressions**: Nested grouping with `the quantity` allows for complex mathematical formulas.
-- **English Articles**: Use `a` or `an` naturally; the compiler handles the stripping.
+- **Managed Strings**: First-class `string` type. No more manual `char*` buffers. Concatenate with `Call 'join'` and compare with `is equal to`.
+- **Intelligent Prelude**: Common C headers (`stdio.h`, `math.h`, etc.) are included automatically. Scientific headers like `complex.h`, `fftw3.h`, and `gsl_statistics.h` are injected when needed.
+- **Blessed Libraries**: Call high-performance functions like `mean`, `standard_deviation`, and `fft_forward` directly.
+- **Strict Grammar**: Deterministic list formatting ensures clarity:
+    - 1 item: `X`
+    - 2 items: `X and Y`
+    - 3+ items: `X, Y, and Z` (Oxford comma required).
+- **Direct C Interop**: Use any C type directly (e.g., `uint32_t`).
+- **Complex Arithmetic**: Native support for imaginary literals like `1j` and `4.2j`.
 
 ---
 
@@ -30,33 +41,23 @@ xdg-open REGULA.html    # Linux
 start REGULA.html       # Windows
 ```
 
-Or view it at Github Pages:
-
-```
-https://jreyes913.github.io/veritas/REGULA.html
-```
-
 ---
 
 
-## Arena Allocator Runtime Example
+## Arena Allocator & String Runtime
 
-Generated C programs now use a 16MB arena allocator and allocate variables from the arena.
+Generated C programs use a 16MB arena allocator. Strings created via `Call 'join'` or `string` declarations are automatically managed within the arena.
 
 ```c
+/* Generated C Example */
 Arena arena = arena_create(16 * 1024 * 1024);
+global_arena = &arena;
 
-int *x = arena_alloc(&arena, sizeof(int));
-double *t = arena_alloc(&arena, 100 * sizeof(double));
+char* *name = arena_alloc(&arena, sizeof(char*));
+*name = join("Jose", "Reyes");
 
-*x = 5;
-for (int i = 0; i < 100; i++) {
-    t[i] = (double)i * 0.5;
-}
-
-printf("x = %d\n", *x);
-for (int i = 0; i < 5; i++) {
-    printf("t[%d] = %.2f\n", i, t[i]);
+if (strcmp(*name, "JoseReyes") == 0) {
+    printf("Managed strings work!\n");
 }
 
 arena_destroy(&arena);
@@ -84,7 +85,7 @@ bash veritasc.sh example.ver
 ./example
 ```
 
-`veritasc.sh` handles transpilation and compilation in one step. It automatically detects which libraries are included in your `.ver` source and passes the correct linker flags to GCC.
+`veritasc.sh` handles transpilation, linking with the `runtime.c` support file, and library detection in one step.
 
 ---
 
@@ -92,73 +93,16 @@ bash veritasc.sh example.ver
 
 The `veritas-language/` folder contains a VS Code extension that provides:
 
-- Syntax highlighting for `.ver` files
+- Syntax highlighting for `.ver` files (including support for `j` literals)
 - A file icon in the Explorer sidebar
 
-### Option A — Local installation (VS Code on your machine)
+### Installation
 
 ```bash
 cp -r veritas-language ~/.vscode/extensions/
 ```
 
-Restart VS Code. The extension loads automatically.
-
-### Option B — Remote server via VS Code Remote-SSH
-
-If you edit files on a remote server using the Remote-SSH extension, install it on the **server**, not your local machine:
-
-```bash
-# On the remote server
-mkdir -p ~/.vscode-server/extensions/
-cp -r veritas-language ~/.vscode-server/extensions/
-```
-
-Then in VS Code: `Ctrl+Shift+P` → **Developer: Reload Window**.
-
-If the extension does not appear in **Show Running Extensions** after reloading, clear the extension cache and reconnect:
-
-```bash
-# On the remote server
-rm -rf ~/.vscode-server/data/CachedExtensions/
-```
-
-Then close the Remote-SSH connection from your laptop (`Ctrl+Shift+P` → **Remote: Close Remote Connection**) and reconnect.
-
-### Verifying the extension is active
-
-`Ctrl+Shift+P` → **Developer: Show Running Extensions** — `veritas-language` should appear in the list. Open any `.ver` file to confirm syntax highlighting is active.
-
-### Token colors
-
-The extension maps Veritas tokens to VS Code's theme colors by default. For higher contrast, add the following to your VS Code user settings (`Ctrl+Shift+P` → **Preferences: Open User Settings (JSON)**):
-
-```json
-"editor.tokenColorCustomizations": {
-    "textMateRules": [
-        { "scope": "keyword.control.program.start.veritas", "settings": { "foreground": "#FF4D6D", "fontStyle": "bold" } },
-        { "scope": "keyword.control.program.end.veritas", "settings": { "foreground": "#FF758F", "fontStyle": "bold" } },
-        { "scope": "keyword.control.include.veritas", "settings": { "foreground": "#FFB703", "fontStyle": "bold" } },
-        { "scope": "keyword.control.function.start.veritas", "settings": { "foreground": "#3A86FF", "fontStyle": "bold" } },
-        { "scope": "keyword.control.function.end.veritas", "settings": { "foreground": "#4CC9F0", "fontStyle": "bold" } },
-        { "scope": "keyword.control.declaration.veritas", "settings": { "foreground": "#80ED99", "fontStyle": "bold" } },
-        { "scope": "keyword.control.assignment.veritas", "settings": { "foreground": "#2EC4B6", "fontStyle": "bold" } },
-        { "scope": "keyword.control.call.veritas", "settings": { "foreground": "#06D6A0", "fontStyle": "bold" } },
-        { "scope": "keyword.control.loop.start.veritas", "settings": { "foreground": "#8338EC", "fontStyle": "bold" } },
-        { "scope": "keyword.control.loop.end.veritas", "settings": { "foreground": "#B5179E", "fontStyle": "bold" } },
-        { "scope": "keyword.control.conditional.if.veritas", "settings": { "foreground": "#FB5607", "fontStyle": "bold" } },
-        { "scope": "keyword.control.conditional.else.veritas", "settings": { "foreground": "#FF006E", "fontStyle": "bold" } },
-        { "scope": "keyword.control.conditional.end.veritas", "settings": { "foreground": "#E5383B", "fontStyle": "bold" } },
-        { "scope": "keyword.other.veritas", "settings": { "foreground": "#FFD166" } },
-        { "scope": "storage.type.veritas", "settings": { "foreground": "#00F5D4", "fontStyle": "bold" } },
-        { "scope": "keyword.operator.veritas", "settings": { "foreground": "#FF9F1C", "fontStyle": "bold" } },
-        { "scope": "variable.other.veritas", "settings": { "foreground": "#90E0EF" } },
-        { "scope": "string.quoted.double.veritas", "settings": { "foreground": "#C1FBA4" } },
-        { "scope": "constant.numeric.veritas", "settings": { "foreground": "#C77DFF", "fontStyle": "bold" } },
-        { "scope": "comment.block.veritas", "settings": { "foreground": "#5C677D", "fontStyle": "italic" } },
-        { "scope": "punctuation.terminator.veritas", "settings": { "foreground": "#F94144", "fontStyle": "bold" } }
-    ]
-}
-```
+Restart VS Code to activate.
 
 ---
 
@@ -167,19 +111,28 @@ The extension maps Veritas tokens to VS Code's theme colors by default. For high
 ```
 .
 ├── REGULA.html              # Full language specification (styled)
-├── vcparser.py              # Veritas → C transpiler
-├── veritasc.sh              # Build script (transpile + compile)
-├── example.ver              # Example Veritas program
-├── .gitignore               # .gitignore
+├── vcparser.py              # Veritas → C transpiler compatibility entrypoint
+├── compiler/
+│   ├── main.py              # Main compiler entrypoint
+│   ├── legacy.py            # Core parser and code generator
+│   ├── runtime.c            # C runtime for strings and scientific helpers
+│   ├── frontend/            # Lexer and Parser
+│   ├── semantic/            # Semantic Analyzer and Symbol Table
+│   └── ir/                  # Intermediate Representation and Lowering
+├── veritasc.sh              # Build script (transpile + compile + link)
+├── tests/                   # Test suite (finance, physics, math, statistics)
+├── .gitignore               # .gitignore (excludes binaries and .c files)
 ├── veritas-language/        # VS Code extension
-│   ├── package.json
-│   ├── language-configuration.json
-│   ├── icons/
-│   │   └── veritas.svg
-│   └── syntaxes/
-│       └── veritas.tmLanguage.json
 └── README.md
 ```
+
+---
+
+## Contact
+
+**Jose Reyes**  
+Email: [jstunner55@gmail.com](mailto:jstunner55@gmail.com)  
+LinkedIn: [jose-reyes-634768264](https://www.linkedin.com/in/jose-reyes-634768264/)
 
 ---
 

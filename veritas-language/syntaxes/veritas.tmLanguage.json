@@ -45,7 +45,7 @@
     },
     "number": {
       "name": "constant.numeric.veritas",
-      "match": "-?\\b[0-9]+(?:\\.[0-9]+)?\\b"
+      "match": "-?\\b[0-9]+(?:\\.[0-9]+)?j?\\b"
     },
     "starterProgram": {
       "patterns": [

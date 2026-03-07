@@ -36,30 +36,17 @@
     min-height: 100vh;
   }
 
-  /* ── Scanline overlay ── */
   body::before {
     content: '';
     position: fixed;
     inset: 0;
-    background: repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 2px,
-      rgba(0,0,0,0.04) 2px,
-      rgba(0,0,0,0.04) 4px
-    );
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.04) 2px, rgba(0,0,0,0.04) 4px);
     pointer-events: none;
     z-index: 1000;
   }
 
-  /* ── Layout ── */
-  .wrap {
-    max-width: 860px;
-    margin: 0 auto;
-    padding: 0 2rem 6rem;
-  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 0 2rem 6rem; }
 
-  /* ── Hero ── */
   .hero {
     display: flex;
     flex-direction: column;
@@ -80,7 +67,6 @@
     background: linear-gradient(90deg, var(--red), var(--green));
   }
 
-  /* ── Inline SVG logo ── */
   .logo {
     width: 72px;
     height: 72px;
@@ -95,302 +81,64 @@
     50%       { filter: drop-shadow(0 0 28px rgba(45,198,83,0.45)) drop-shadow(0 0 14px rgba(230,57,70,0.35)); }
   }
 
-  .hero-eyebrow {
-    font-family: var(--mono);
-    font-size: 0.7rem;
-    letter-spacing: 0.25em;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 0.6rem;
-  }
-
-  .hero-title {
-    font-family: var(--serif);
-    font-size: clamp(2rem, 6vw, 3.2rem);
-    font-weight: 900;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    background: linear-gradient(135deg, #e8ede9 30%, #2DC653 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    line-height: 1.1;
-    text-align: center;
-  }
-
-  .hero-subtitle {
-    font-family: var(--serif);
-    font-size: 0.85rem;
-    letter-spacing: 0.2em;
-    color: var(--muted);
-    text-transform: uppercase;
-    margin-top: 0.6rem;
-  }
-
-  .hero-tagline {
-    margin-top: 1.8rem;
-    font-size: 0.95rem;
-    color: var(--text);
-    text-align: center;
-    max-width: 520px;
-    font-weight: 300;
-    font-style: italic;
-    opacity: 0.8;
-  }
-
-  .ver-badge {
-    margin-top: 1.4rem;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 0.3rem 0.8rem;
-    font-family: var(--mono);
-    font-size: 0.75rem;
-    color: var(--green);
-    letter-spacing: 0.05em;
-  }
-
+  .hero-eyebrow { font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.25em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.6rem; }
+  .hero-title { font-family: var(--serif); font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; background: linear-gradient(135deg, #e8ede9 30%, #2DC653 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; line-height: 1.1; text-align: center; }
+  .hero-subtitle { font-family: var(--serif); font-size: 0.85rem; letter-spacing: 0.2em; color: var(--muted); text-transform: uppercase; margin-top: 0.6rem; }
+  .ver-badge { margin-top: 1.4rem; display: inline-flex; align-items: center; gap: 0.5rem; background: var(--bg3); border: 1px solid var(--border); border-radius: 4px; padding: 0.3rem 0.8rem; font-family: var(--mono); font-size: 0.75rem; color: var(--green); letter-spacing: 0.05em; }
   .ver-badge span { color: var(--muted); }
 
-  /* ── Section headings ── */
-  .section {
-    margin-top: 3.5rem;
+  .nav-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-top: 4rem;
   }
 
-  .section-number {
-    font-family: var(--mono);
-    font-size: 0.65rem;
-    color: var(--muted);
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    margin-bottom: 0.4rem;
-  }
+  @media (max-width: 600px) { .nav-grid { grid-template-columns: 1fr; } }
 
-  h2 {
-    font-family: var(--serif);
-    font-size: 1.1rem;
-    font-weight: 600;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--heading);
-    padding-bottom: 0.6rem;
-    border-bottom: 1px solid var(--border);
-    margin-bottom: 1.2rem;
-    position: relative;
-  }
-
-  h2::before {
-    content: '';
-    position: absolute;
-    bottom: -1px;
-    left: 0;
-    width: 2.5rem;
-    height: 1px;
-    background: var(--green);
-  }
-
-  p {
-    margin-bottom: 0.9rem;
-    font-weight: 300;
-  }
-
-  strong {
-    color: var(--heading);
-    font-weight: 500;
-  }
-
-  /* ── Code blocks ── */
-  pre {
+  .nav-card {
     background: var(--bg2);
     border: 1px solid var(--border);
-    border-left: 3px solid var(--green);
-    border-radius: 0 4px 4px 0;
-    padding: 1rem 1.2rem;
-    overflow-x: auto;
-    margin: 1rem 0 1.2rem;
-    position: relative;
-  }
-
-  pre::before {
-    content: 'VER';
-    position: absolute;
-    top: 0.5rem;
-    right: 0.8rem;
-    font-family: var(--mono);
-    font-size: 0.6rem;
-    letter-spacing: 0.15em;
-    color: var(--muted);
-  }
-
-  pre.c-block {
-    border-left-color: var(--red);
-  }
-  pre.c-block::before { content: 'C'; }
-
-  code {
-    font-family: var(--mono);
-    font-size: 0.82rem;
-    line-height: 1.7;
-    color: #a8d8b0;
-  }
-
-  p code, li code, td code {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: 3px;
-    padding: 0.05em 0.35em;
-    font-size: 0.8rem;
-    color: var(--green);
-  }
-
-  /* ── Keyword highlighting inside pre ── */
-  .kw-ctrl  { color: #E63946; }
-  .kw-decl  { color: #FFB347; }
-  .kw-call  { color: #74C7EC; }
-  .kw-type  { color: #2DC653; }
-  .kw-ident { color: #CDB4DB; }
-  .kw-str   { color: #A8FF78; }
-  .kw-num   { color: #C77DFF; }
-  .kw-op    { color: #FFD93D; }
-  .kw-cmt   { color: #6b7270; font-style: italic; }
-
-  /* ── Tables ── */
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 1rem 0 1.2rem;
-    font-size: 0.85rem;
-  }
-
-  th {
-    font-family: var(--mono);
-    font-size: 0.65rem;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    color: var(--muted);
-    text-align: left;
-    padding: 0.5rem 1rem;
-    border-bottom: 1px solid var(--border);
-  }
-
-  td {
-    padding: 0.55rem 1rem;
-    border-bottom: 1px solid var(--border);
-    font-weight: 300;
-  }
-
-  td:first-child { font-family: var(--mono); font-size: 0.8rem; color: var(--green); }
-  td:last-child  { font-family: var(--mono); font-size: 0.8rem; color: #FFB347; }
-
-  tr:hover td { background: var(--bg3); }
-
-  /* ── Lists ── */
-  ul, ol {
-    padding-left: 1.4rem;
-    margin-bottom: 0.9rem;
-  }
-
-  li {
-    margin-bottom: 0.3rem;
-    font-weight: 300;
-  }
-
-  li::marker { color: var(--green); }
-
-  /* ── Keyword pills ── */
-  .keyword-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    margin: 1rem 0;
-  }
-
-  .kpill {
-    font-family: var(--mono);
-    font-size: 0.72rem;
-    padding: 0.25rem 0.65rem;
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: 3px;
-    color: var(--red);
-    letter-spacing: 0.04em;
-  }
-
-  /* ── Callout boxes ── */
-  .callout {
-    border: 1px solid var(--border);
-    border-left: 3px solid var(--red);
-    background: var(--bg2);
-    border-radius: 0 4px 4px 0;
-    padding: 0.8rem 1.1rem;
-    margin: 1rem 0;
-    font-size: 0.88rem;
-  }
-
-  .callout strong { color: var(--red); }
-
-  /* ── Philosophy block ── */
-  .philosophy {
-    border: 1px solid var(--border);
-    background: var(--bg3);
+    padding: 2rem;
     border-radius: 6px;
-    padding: 1.6rem 2rem;
-    margin: 1.2rem 0;
+    text-decoration: none;
+    transition: all 0.3s ease;
     position: relative;
     overflow: hidden;
   }
 
-  .philosophy::before {
-    content: '"';
+  .nav-card::before {
+    content: '';
     position: absolute;
-    top: -0.5rem;
-    left: 1rem;
+    top: 0; left: 0; width: 3px; height: 100%;
+    background: var(--muted);
+    transition: background 0.3s ease;
+  }
+
+  .nav-card:hover {
+    background: var(--bg3);
+    border-color: var(--green);
+    transform: translateY(-2px);
+  }
+
+  .nav-card:hover::before { background: var(--green); }
+
+  .nav-card h2 {
     font-family: var(--serif);
-    font-size: 6rem;
-    color: var(--green);
-    opacity: 0.08;
-    line-height: 1;
-    pointer-events: none;
-  }
-
-  .philosophy p {
     font-size: 1rem;
-    line-height: 1.9;
-    font-style: italic;
     color: var(--heading);
-    font-weight: 300;
-    margin: 0;
-  }
-
-  /* ── Code pair ── */
-  .code-pair {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-    margin: 1rem 0 1.2rem;
-  }
-
-  @media (max-width: 640px) {
-    .code-pair { grid-template-columns: 1fr; }
-  }
-
-  .code-pair pre { margin: 0; }
-
-  .code-pair-label {
-    font-family: var(--mono);
-    font-size: 0.65rem;
-    letter-spacing: 0.15em;
+    margin-bottom: 0.5rem;
     text-transform: uppercase;
-    margin-bottom: 0.4rem;
+    letter-spacing: 0.1em;
   }
 
-  .code-pair-label.ver { color: var(--green); }
-  .code-pair-label.c   { color: var(--red); }
+  .nav-card p {
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin: 0;
+    line-height: 1.5;
+  }
 
-  /* ── Footer ── */
   footer {
     margin-top: 5rem;
     padding-top: 2rem;
@@ -410,7 +158,6 @@
 <body>
 <div class="wrap">
 
-  <!-- ── HERO ── -->
   <header class="hero">
     <svg class="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
       <line x1="15" y1="15" x2="50" y2="82" stroke="#E63946" stroke-width="22" stroke-linecap="round"/>
@@ -419,439 +166,31 @@
     <p class="hero-eyebrow">Lingua Programmatica</p>
     <h1 class="hero-title">Veritas</h1>
     <p class="hero-subtitle">The True Programming Language</p>
-    <p class="hero-tagline">A language designed to resemble clear, structured human English while remaining deterministic and easy to parse.</p>
-    <div class="ver-badge"><span>version</span> 1.1.0 &nbsp;|&nbsp; <span>file extension</span> .ver</div>
+    <div class="ver-badge"><span>version</span> 1.2.0 &nbsp;|&nbsp; <span>file extension</span> .ver</div>
   </header>
 
-  <!-- ── §01 PHILOSOPHY ── -->
-  <section class="section">
-    <p class="section-number">§ 01</p>
-    <h2>Philosophy</h2>
-    <div class="philosophy">
-      <p>Veritas prioritizes <strong>readability over typing speed</strong>. Programs should read like well-structured English instructions. Every instruction must follow strict grammatical rules so that the compiler can translate the program into C code without ambiguity.</p>
-    </div>
-  </section>
-
-  <!-- ── §02 FILE EXTENSION ── -->
-  <section class="section">
-    <p class="section-number">§ 02</p>
-    <h2>File Extension</h2>
-    <p>All Veritas source files must use the <code>.ver</code> file extension.</p>
-    <pre><code>example.ver</code></pre>
-  </section>
-
-  <!-- ── §03 SENTENCE TERMINATION ── -->
-  <section class="section">
-    <p class="section-number">§ 03</p>
-    <h2>Sentence Termination</h2>
-    <p>Every statement must end with a <strong>period (<code>.</code>)</strong>. Multi-line statements are joined by the compiler and terminated by the final period.</p>
-    <pre><code><span class="kw-decl">Create</span> <span class="kw-ident">'x'</span> <span class="kw-type">as an int</span>.</code></pre>
-  </section>
-
-  <!-- ── §04 COMMENTS ── -->
-  <section class="section">
-    <p class="section-number">§ 04</p>
-    <h2>Comments</h2>
-    <p>Comments use <strong>C-style block syntax</strong>. Both inline and multi-line comments are supported. Comments are stripped before parsing.</p>
-    <pre><code><span class="kw-cmt">/* This variable stores the result */</span>
-<span class="kw-decl">Create</span> <span class="kw-ident">'result'</span> <span class="kw-type">as a float</span> with value <span class="kw-num">2.0</span>.</code></pre>
-  </section>
-
-  <!-- ── §05 IDENTIFIERS ── -->
-  <section class="section">
-    <p class="section-number">§ 05</p>
-    <h2>Identifiers</h2>
-    <p>Variable names, function names, and array names must be enclosed in <strong>single quotes</strong>. This prevents ambiguity between English keywords and user-defined names.</p>
-    <pre><code><span class="kw-ident">'x'</span>
-<span class="kw-ident">'result'</span>
-<span class="kw-ident">'safeSqrt'</span>
-<span class="kw-ident">'values'</span></code></pre>
-  </section>
-
-  <!-- ── §06 STRING LITERALS ── -->
-  <section class="section">
-    <p class="section-number">§ 06</p>
-    <h2>String Literals</h2>
-    <p>String literals must be enclosed in <strong>double quotes</strong>.</p>
-    <pre><code><span class="kw-str">"Hello world\n"</span>
-<span class="kw-str">"sqrt(%f) = %f\n"</span></code></pre>
-  </section>
-
-  <!-- ── §07 LIBRARY INCLUSION ── -->
-  <section class="section">
-    <p class="section-number">§ 07</p>
-    <h2>Library Inclusion</h2>
-    <p>Use <code>library</code> or <code>header</code> interchangeably. The name is passed directly to <code>#include &lt;...&gt;</code>.</p>
-    <pre><code><span class="kw-decl">Include</span> the library <span class="kw-ident">'stdio.h'</span>.
-<span class="kw-decl">Include</span> the library <span class="kw-ident">'math.h'</span>.
-<span class="kw-decl">Include</span> the header <span class="kw-ident">'my_header.h'</span>.</code></pre>
-  </section>
-
-  <!-- ── §08 PROGRAM DECLARATION ── -->
-  <section class="section">
-    <p class="section-number">§ 08</p>
-    <h2>Program Declaration</h2>
-    <p>Every program must open and close with matching declaration statements using the same program name.</p>
-    <pre><code><span class="kw-ctrl">This is the program</span> <span class="kw-ident">'program_name'</span>.
-<span class="kw-cmt">/* ... body ... */</span>
-<span class="kw-ctrl">End of the program</span> <span class="kw-ident">'program_name'</span>.</code></pre>
-  </section>
-
-  <!-- ── §09 TYPE SYSTEM ── -->
-  <section class="section">
-    <p class="section-number">§ 09</p>
-    <h2>Type System</h2>
-    <p>Veritas strips the English article (<code>a</code> or <code>an</code>) and passes the remainder directly to C as the type name. This means any valid C type can be used. Multi-word types such as <code>double complex</code> are fully supported.</p>
-    <table>
-      <thead><tr><th>Veritas</th><th>C</th></tr></thead>
-      <tbody>
-        <tr><td>a float</td><td>float</td></tr>
-        <tr><td>an int</td><td>int</td></tr>
-        <tr><td>a double</td><td>double</td></tr>
-        <tr><td>a double complex</td><td>double complex</td></tr>
-        <tr><td>a float pointer</td><td>float*</td></tr>
-        <tr><td>a double complex pointer</td><td>double complex*</td></tr>
-        <tr><td>nothing</td><td>void</td></tr>
-      </tbody>
-    </table>
-    <div class="callout">
-      <strong>Rule of Article:</strong> Use <code>an</code> before vowel-initial types (<code>an int</code>, <code>an unsigned int</code>) and <code>a</code> before consonant-initial types (<code>a float</code>, <code>a double</code>). The compiler warns on mismatch but output is unaffected. <code>nothing</code> is the only reserved type keyword and always maps to <code>void</code>.
-    </div>
-  </section>
-
-  <!-- ── §10 VARIABLE CREATION ── -->
-  <section class="section">
-    <p class="section-number">§ 10</p>
-    <h2>Variable Creation</h2>
-    <p>Variables may be declared with or without an initial value.</p>
-    <pre><code><span class="kw-decl">Create</span> <span class="kw-ident">'result'</span> <span class="kw-type">as a float</span>.
-<span class="kw-decl">Create</span> <span class="kw-ident">'count'</span> <span class="kw-type">as an int</span> with value <span class="kw-num">1</span>.
-<span class="kw-decl">Create</span> <span class="kw-ident">'ptr'</span> <span class="kw-type">as a double pointer</span>.
-<span class="kw-decl">Create</span> <span class="kw-ident">'z'</span> <span class="kw-type">as a double complex</span>.
-<span class="kw-decl">Create</span> <span class="kw-ident">'PI'</span> <span class="kw-type">as a double</span> with value <span class="kw-num">3.141592654</span>.</code></pre>
-  </section>
-
-  <!-- ── §11 ARRAY CREATION ── -->
-  <section class="section">
-    <p class="section-number">§ 11</p>
-    <h2>Array Creation</h2>
-    <p>Array size must be a literal integer. Items are separated with commas; the final item is preceded by <strong>and</strong>. Multi-word types are supported.</p>
-    <pre><code><span class="kw-decl">Create</span> <span class="kw-ident">'values'</span> <span class="kw-type">as a float array</span> of size <span class="kw-num">5</span> with values:
-<span class="kw-num">4.0</span>,
-<span class="kw-num">9.0</span>,
-<span class="kw-num">0.0</span>,
-<span class="kw-num">-5.0</span>,
-and <span class="kw-num">16.0</span>.
-
-<span class="kw-decl">Create</span> <span class="kw-ident">'output'</span> <span class="kw-type">as a double complex array</span> of size <span class="kw-num">8</span>.</code></pre>
-  </section>
-
-  <!-- ── §12 FUNCTION DEFINITION ── -->
-  <section class="section">
-    <p class="section-number">§ 12</p>
-    <h2>Function Definition</h2>
-    <p>Parameters are separated by commas or <code>and</code>. The return type follows <code>returning</code>. Use <code>returning nothing</code> for void functions.</p>
-    <pre><code><span class="kw-decl">Define</span> the function <span class="kw-ident">'safeSqrt'</span>
-with <span class="kw-ident">'x'</span> <span class="kw-type">as a float</span>,
-<span class="kw-ident">'result'</span> <span class="kw-type">as a float pointer</span>
-returning <span class="kw-type">nothing</span>.
-
-    <span class="kw-cmt">/* body */</span>
-
-<span class="kw-ctrl">End function</span> <span class="kw-ident">'safeSqrt'</span>.</code></pre>
-    <p>Pointers in parameter lists render with the <code>*</code> adjacent to the name: <code>float *result</code>.</p>
-  </section>
-
-  <!-- ── §13 FUNCTION CALLS ── -->
-  <section class="section">
-    <p class="section-number">§ 13</p>
-    <h2>Function Calls</h2>
-    <p>Every call must end with <code>stored to</code>. Use <code>stored to nothing</code> to discard the return value.</p>
-    <pre><code><span class="kw-call">Call</span> <span class="kw-ident">'sqrt'</span> with <span class="kw-ident">'x'</span>, stored to <span class="kw-ident">'y'</span>.
-<span class="kw-call">Call</span> <span class="kw-ident">'printf'</span> with <span class="kw-str">"Hello\n"</span>, stored to nothing.
-<span class="kw-call">Call</span> <span class="kw-ident">'dft'</span> with
-<span class="kw-ident">'input'</span>,
-<span class="kw-ident">'output'</span>,
-and <span class="kw-ident">'N'</span>
-stored to nothing.</code></pre>
-  </section>
-
-  <!-- ── §14–15 POINTERS & ADDRESSES ── -->
-  <section class="section">
-    <p class="section-number">§ 14 – 15</p>
-    <h2>Pointers &amp; Address Access</h2>
-    <table>
-      <thead><tr><th>C</th><th>Veritas Syntax</th></tr></thead>
-      <tbody>
-        <tr><td>&amp;var</td><td>the address of <strong>'var'</strong></td></tr>
-        <tr><td>*ptr</td><td>value at <strong>'ptr'</strong></td></tr>
-        <tr><td>arr[i]</td><td>an element of <strong>'arr'</strong> at index <strong>'i'</strong></td></tr>
-      </tbody>
-    </table>
-    <pre><code><span class="kw-call">Call</span> <span class="kw-ident">'safeSqrt'</span> with <span class="kw-ident">'x'</span> and the address of <span class="kw-ident">'result'</span>, stored to nothing.
-<span class="kw-call">Replace</span> value at <span class="kw-ident">'ptr'</span> with <span class="kw-num">0.0</span>.
-<span class="kw-call">Replace</span> an element of <span class="kw-ident">'values'</span> at index <span class="kw-ident">'i'</span> with <span class="kw-num">9.0</span>.</code></pre>
-  </section>
-
-  <!-- ── §16 ASSIGNMENT ── -->
-  <section class="section">
-    <p class="section-number">§ 16</p>
-    <h2>Assignment</h2>
-    <pre><code><span class="kw-call">Replace</span> <span class="kw-ident">'x'</span> with <span class="kw-num">0.0</span>.
-<span class="kw-call">Replace</span> value at <span class="kw-ident">'result'</span> with <span class="kw-num">2.1</span>.   <span class="kw-cmt">/* pointer dereference assignment */</span>
-<span class="kw-call">Replace</span> an element of <span class="kw-ident">'arr'</span> at index <span class="kw-ident">'i'</span> with <span class="kw-num">0</span>.</code></pre>
-  </section>
-
-  <!-- ── §17 CONDITIONALS ── -->
-  <section class="section">
-    <p class="section-number">§ 17</p>
-    <h2>Conditionals</h2>
-    <p>The closing <code>End if</code> repeats the original condition for readability. <code>Otherwise</code> is optional.</p>
-    <pre><code><span class="kw-ctrl">If</span> <span class="kw-ident">'x'</span> <span class="kw-op">is greater than</span> <span class="kw-num">0.0</span>:
-
-    <span class="kw-call">Replace</span> <span class="kw-ident">'y'</span> with <span class="kw-num">1.0</span>.
-
-<span class="kw-ctrl">Otherwise</span>:
-
-    <span class="kw-call">Replace</span> <span class="kw-ident">'y'</span> with <span class="kw-num">-1.0</span>.
-
-<span class="kw-ctrl">End if</span> <span class="kw-ident">'x'</span> <span class="kw-op">is greater than</span> <span class="kw-num">0.0</span>.</code></pre>
-  </section>
-
-  <!-- ── §18 COMPARISON OPERATORS ── -->
-  <section class="section">
-    <p class="section-number">§ 18</p>
-    <h2>Comparison Operators</h2>
-    <table>
-      <thead><tr><th>C</th><th>Veritas</th></tr></thead>
-      <tbody>
-        <tr><td>==</td><td>is equal to</td></tr>
-        <tr><td>&gt;</td><td>is greater than</td></tr>
-        <tr><td>&lt;</td><td>is less than</td></tr>
-        <tr><td>&gt;=</td><td>is greater than or equal to</td></tr>
-        <tr><td>&lt;=</td><td>is less than or equal to</td></tr>
-      </tbody>
-    </table>
-  </section>
-
-  <!-- ── §19 LOOPS ── -->
-  <section class="section">
-    <p class="section-number">§ 19</p>
-    <h2>Loops</h2>
-    <p>The closing <code>End iteration</code> repeats the original bounds. Loop variables are declared as <code>int</code> automatically.</p>
-    <table>
-      <thead><tr><th>Keyword</th><th>C condition</th></tr></thead>
-      <tbody>
-        <tr><td>from A through B</td><td>i &lt;= B</td></tr>
-        <tr><td>from A to B</td><td>i &lt; B</td></tr>
-      </tbody>
-    </table>
-    <pre><code><span class="kw-ctrl">For every iteration</span> of <span class="kw-ident">'i'</span> from <span class="kw-num">0</span> through <span class="kw-num">4</span>:
-
-    <span class="kw-cmt">/* body — i runs 0, 1, 2, 3, 4 */</span>
-
-<span class="kw-ctrl">End iteration</span> of <span class="kw-ident">'i'</span> from <span class="kw-num">0</span> through <span class="kw-num">4</span>.
-
-<span class="kw-ctrl">For every iteration</span> of <span class="kw-ident">'k'</span> from <span class="kw-num">0</span> to <span class="kw-ident">'N'</span>:
-
-    <span class="kw-cmt">/* body — k runs 0 … N-1 */</span>
-
-<span class="kw-ctrl">End iteration</span> of <span class="kw-ident">'k'</span> from <span class="kw-num">0</span> to <span class="kw-ident">'N'</span>.</code></pre>
-  </section>
-
-  <!-- ── §20–21 ARITHMETIC ── -->
-  <section class="section">
-    <p class="section-number">§ 20 – 21</p>
-    <h2>Arithmetic Operators</h2>
-    <table>
-      <thead><tr><th>C</th><th>Veritas</th></tr></thead>
-      <tbody>
-        <tr><td>+</td><td>plus</td></tr>
-        <tr><td>-</td><td>minus</td></tr>
-        <tr><td>*</td><td>multiplied by</td></tr>
-        <tr><td>/</td><td>divided by</td></tr>
-      </tbody>
-    </table>
-
-    <p>Bare <code>Replace</code> and <code>Create ... with value</code> statements support a <strong>single operator</strong> only. For compound expressions, use <strong>the quantity</strong> to create a parenthesised group.</p>
-
-    <pre><code><span class="kw-call">Replace</span> <span class="kw-ident">'x'</span> with <span class="kw-ident">'a'</span> <span class="kw-op">plus</span> <span class="kw-ident">'b'</span>.
-<span class="kw-cmt">/* x = a + b; */</span></code></pre>
-
-    <p>Use <strong>the quantity</strong> to group sub-expressions, and <strong>semicolons</strong> to chain multiple groups into one compound expression.</p>
-
-    <pre><code><span class="kw-call">Replace</span> <span class="kw-ident">'y'</span> with <span class="kw-ident">the quantity</span> <span class="kw-num">2</span> <span class="kw-op">multiplied by</span> <span class="kw-ident">'x'</span> <span class="kw-op">plus</span> <span class="kw-num">3</span>; <span class="kw-op">multiplied by</span> <span class="kw-ident">the quantity</span> <span class="kw-num">3</span> <span class="kw-op">multiplied by</span> <span class="kw-ident">'x'</span> <span class="kw-op">plus</span> <span class="kw-num">5</span>.
-<span class="kw-cmt">/* y = (2 * x + 3) * (3 * x + 5); */</span></code></pre>
-
-    <p>Nested quantities are supported — a <strong>the quantity</strong> group may appear as the RHS of an outer operator.</p>
-
-    <pre><code><span class="kw-call">Replace</span> an element of <span class="kw-ident">'output'</span> at index <span class="kw-ident">'k'</span> with
-<span class="kw-ident">the quantity</span> an element of <span class="kw-ident">'output'</span> at index <span class="kw-ident">'k'</span>
-<span class="kw-op">plus</span> an element of <span class="kw-ident">'input'</span> at index <span class="kw-ident">'n'</span>
-<span class="kw-op">multiplied by</span> <span class="kw-ident">the quantity</span> <span class="kw-ident">'cos_angle'</span> <span class="kw-op">plus</span> <span class="kw-ident">'sin_angle'</span> <span class="kw-op">multiplied by</span> <span class="kw-ident">'I'</span>.
-<span class="kw-cmt">/* output[k] = (output[k] + input[n] * (cos_angle + sin_angle * I)); */</span></code></pre>
-  </section>
-
-  <!-- ── §22 EXPONENTIATION ── -->
-  <section class="section">
-    <p class="section-number">§ 22</p>
-    <h2>Exponentiation</h2>
-    <p>Exponentiation is not a built-in operator. Use <code>pow</code> from <code>math.h</code>.</p>
-    <pre><code><span class="kw-call">Call</span> <span class="kw-ident">'pow'</span> with <span class="kw-ident">'x'</span> and <span class="kw-num">2</span>, stored to <span class="kw-ident">'y'</span>.</code></pre>
-  </section>
-
-  <!-- ── §23 ENGLISH LIST RULES ── -->
-  <section class="section">
-    <p class="section-number">§ 23</p>
-    <h2>English List Rules</h2>
-    <p>Argument lists and array initialisers follow standard English serial comma convention.</p>
-    <table>
-      <thead><tr><th>Items</th><th>Form</th></tr></thead>
-      <tbody>
-        <tr><td>2</td><td>A and B</td></tr>
-        <tr><td>3+</td><td>A, B, and C</td></tr>
-      </tbody>
-    </table>
-  </section>
-
-  <!-- ── §24 RESERVED KEYWORDS ── -->
-  <section class="section">
-    <p class="section-number">§ 24</p>
-    <h2>Reserved Keywords</h2>
-    <p>The following words are reserved and cannot be used as identifiers.</p>
-    <div class="keyword-grid">
-      <span class="kpill">This is the program</span>
-      <span class="kpill">End of the program</span>
-      <span class="kpill">Include the</span>
-      <span class="kpill">Define the function</span>
-      <span class="kpill">End function</span>
-      <span class="kpill">Create</span>
-      <span class="kpill">Replace</span>
-      <span class="kpill">Call</span>
-      <span class="kpill">For every iteration</span>
-      <span class="kpill">End iteration</span>
-      <span class="kpill">If</span>
-      <span class="kpill">Otherwise</span>
-      <span class="kpill">End if</span>
-      <span class="kpill">stored to</span>
-      <span class="kpill">returning</span>
-      <span class="kpill">with value</span>
-      <span class="kpill">with values</span>
-      <span class="kpill">array of size</span>
-      <span class="kpill">the quantity</span>
-      <span class="kpill">an element of</span>
-      <span class="kpill">at index</span>
-      <span class="kpill">the address of</span>
-      <span class="kpill">value at</span>
-      <span class="kpill">nothing</span>
-      <span class="kpill">through</span>
-      <span class="kpill">from</span>
-      <span class="kpill">and</span>
-    </div>
-  </section>
-
-  <!-- ── §25 FORMATTING ── -->
-  <section class="section">
-    <p class="section-number">§ 25</p>
-    <h2>Formatting Guidelines</h2>
-    <p>Indentation is recommended for readability but not enforced. Multi-line statements are joined by the compiler as long as continuation lines do not begin with a reserved starter keyword. Nested structures such as loops and conditionals should be indented for clarity.</p>
-  </section>
-
-  <!-- ── §26 PROGRAM STRUCTURE ── -->
-  <section class="section">
-    <p class="section-number">§ 26</p>
-    <h2>Program Structure</h2>
-    <p>A Veritas program has two logical sections. <strong>Definitions</strong> (<code>Include</code>, <code>Create</code>, <code>Define</code>) are placed at the top level and become globals or function definitions in the generated C. All other statements become <strong>execution statements</strong> inside <code>main</code>.</p>
-
-    <div class="code-pair">
-      <div>
-        <p class="code-pair-label ver">Veritas</p>
-        <pre><code><span class="kw-decl">Include</span> the library <span class="kw-ident">'stdio.h'</span>.
-
-<span class="kw-decl">Create</span> <span class="kw-ident">'x'</span> <span class="kw-type">as an int</span>.
-
-<span class="kw-decl">Define</span> the function <span class="kw-ident">'printVal'</span>
-with <span class="kw-ident">'value'</span> <span class="kw-type">as an int</span>
-returning <span class="kw-type">nothing</span>.
-
-    <span class="kw-call">Call</span> <span class="kw-ident">'printf'</span> with
-    <span class="kw-str">"Value = %d\n"</span>
-    and <span class="kw-ident">'value'</span>,
-    stored to nothing.
-
-<span class="kw-ctrl">End function</span> <span class="kw-ident">'printVal'</span>.
-
-<span class="kw-call">Call</span> <span class="kw-ident">'printVal'</span> with <span class="kw-num">5</span>,
-stored to nothing.</code></pre>
-      </div>
-      <div>
-        <p class="code-pair-label c">Generated C</p>
-        <pre class="c-block"><code>#include &lt;stdio.h&gt;
-
-int x;
-
-void printVal(int value)
-{
-    printf("Value = %d\n", value);
-}
-
-int main(void)
-{
-    printVal(5);
-}</code></pre>
-      </div>
-    </div>
-  </section>
-
-  <!-- ── §27 FULL EXAMPLE ── -->
-  <section class="section">
-    <p class="section-number">§ 27</p>
-    <h2>Full Example — example.ver</h2>
-    <p>A complete program demonstrating function definition, pointers, conditionals, loops, and array access.</p>
-    <pre><code><span class="kw-ctrl">This is the program</span> <span class="kw-ident">'example'</span>.
-<span class="kw-decl">Include</span> the library <span class="kw-ident">'stdio.h'</span>.
-<span class="kw-decl">Include</span> the library <span class="kw-ident">'math.h'</span>.
-<span class="kw-decl">Define</span> the function <span class="kw-ident">'safeSqrt'</span>
-with <span class="kw-ident">'x'</span> <span class="kw-type">as a float</span>
-and <span class="kw-ident">'result'</span> <span class="kw-type">as a float pointer</span>
-returning <span class="kw-type">nothing</span>.
-    <span class="kw-ctrl">If</span> <span class="kw-ident">'x'</span> <span class="kw-op">is equal to</span> <span class="kw-num">0</span>:
-        <span class="kw-call">Replace</span> value at <span class="kw-ident">'result'</span> with <span class="kw-num">0.0</span>.
-    <span class="kw-ctrl">Otherwise</span>:
-        <span class="kw-ctrl">If</span> <span class="kw-ident">'x'</span> <span class="kw-op">is greater than</span> <span class="kw-num">0.0</span>:
-            <span class="kw-call">Call</span> <span class="kw-ident">'sqrt'</span> with <span class="kw-ident">'x'</span>,
-            stored to value at <span class="kw-ident">'result'</span>.
-        <span class="kw-ctrl">Otherwise</span>:
-            <span class="kw-call">Replace</span> value at <span class="kw-ident">'result'</span> with <span class="kw-num">-1.0</span>.
-        <span class="kw-ctrl">End if</span> <span class="kw-ident">'x'</span> <span class="kw-op">is greater than</span> <span class="kw-num">0.0</span>.
-    <span class="kw-ctrl">End if</span> <span class="kw-ident">'x'</span> <span class="kw-op">is equal to</span> <span class="kw-num">0</span>.
-<span class="kw-ctrl">End function</span> <span class="kw-ident">'safeSqrt'</span>.
-<span class="kw-decl">Create</span> <span class="kw-ident">'values'</span> <span class="kw-type">as a float array</span> of size <span class="kw-num">5</span> with values:
-<span class="kw-num">4.0</span>, <span class="kw-num">9.0</span>, <span class="kw-num">0.0</span>, <span class="kw-num">-5.0</span>, and <span class="kw-num">16.0</span>.
-<span class="kw-decl">Create</span> <span class="kw-ident">'result'</span> <span class="kw-type">as a float</span>.
-<span class="kw-ctrl">For every iteration</span> of <span class="kw-ident">'i'</span> from <span class="kw-num">0</span> through <span class="kw-num">4</span>:
-    <span class="kw-call">Call</span> <span class="kw-ident">'safeSqrt'</span> with
-    an element of <span class="kw-ident">'values'</span> at index <span class="kw-ident">'i'</span>
-    and the address of <span class="kw-ident">'result'</span>,
-    stored to nothing.
-    <span class="kw-ctrl">If</span> <span class="kw-ident">'result'</span> <span class="kw-op">is equal to</span> <span class="kw-num">-1.0</span>:
-        <span class="kw-call">Call</span> <span class="kw-ident">'printf'</span> with
-        <span class="kw-str">"Invalid input\n"</span>,
-        stored to nothing.
-    <span class="kw-ctrl">Otherwise</span>:
-        <span class="kw-call">Call</span> <span class="kw-ident">'printf'</span> with
-        <span class="kw-str">"sqrt(%f) = %f\n"</span>,
-        an element of <span class="kw-ident">'values'</span> at index <span class="kw-ident">'i'</span>,
-        and <span class="kw-ident">'result'</span>,
-        stored to nothing.
-    <span class="kw-ctrl">End if</span> <span class="kw-ident">'result'</span> <span class="kw-op">is equal to</span> <span class="kw-num">-1.0</span>.
-<span class="kw-ctrl">End iteration</span> of <span class="kw-ident">'i'</span> from <span class="kw-num">0</span> through <span class="kw-num">4</span>.
-<span class="kw-ctrl">End of the program</span> <span class="kw-ident">'example'</span>.</code></pre>
-  </section>
+  <div class="nav-grid">
+    <a href="pages/installatio.html" class="nav-card">
+      <h2>INSTALLATIO</h2>
+      <p>Installation requirements, setup, and VS Code extension.</p>
+    </a>
+    <a href="pages/initium.html" class="nav-card">
+      <h2>INITIUM</h2>
+      <p>Getting started, program structure, and your first instructions.</p>
+    </a>
+    <a href="pages/usus.html" class="nav-card">
+      <h2>USUS</h2>
+      <p>Detailed language specification, types, and logic rules.</p>
+    </a>
+    <a href="pages/exempla.html" class="nav-card">
+      <h2>EXEMPLA</h2>
+      <p>Full program examples in physics, finance, and mathematics.</p>
+    </a>
+  </div>
 
   <footer>
     <span>REGULA VERITATIS</span>
-    <span>The Rule of Truth — <span>v1.1.0</span></span>
+    <span>The Rule of Truth — <span>v1.2.0</span></span>
   </footer>
 
 </div>

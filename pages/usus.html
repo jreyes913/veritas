@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>USUS — Veritas Documentation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=IBM+Plex+Mono:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --red:      #E63946;
+    --green:    #2DC653;
+    --bg:       #2b2b2b;
+    --bg2:      #232323;
+    --bg3:      #303030;
+    --border:   #3d3d3d;
+    --text:     #c8d0c9;
+    --muted:    #6b7270;
+    --heading:  #e8ede9;
+    --mono:     'IBM Plex Mono', monospace;
+    --sans:     'IBM Plex Sans', sans-serif;
+    --serif:    'Cinzel', serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.8;
+    min-height: 100vh;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.04) 2px, rgba(0,0,0,0.04) 4px);
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  .wrap { max-width: 860px; margin: 0 auto; padding: 4rem 2rem 6rem; }
+
+  .nav-back {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    margin-bottom: 2rem;
+  }
+
+  .nav-back a {
+    color: var(--green);
+    text-decoration: none;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .nav-back a:hover { text-decoration: underline; }
+
+  h1 {
+    font-family: var(--serif);
+    font-size: clamp(1.8rem, 5vw, 2.8rem);
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--heading);
+    margin-bottom: 2rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 1rem;
+  }
+
+  .section { margin-top: 3rem; }
+  .section-number { font-family: var(--mono); font-size: 0.65rem; color: var(--muted); letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 0.4rem; }
+  
+  h2 {
+    font-family: var(--serif);
+    font-size: 1.1rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--heading);
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 1.2rem;
+    position: relative;
+  }
+
+  h2::before { content: ''; position: absolute; bottom: -1px; left: 0; width: 2.5rem; height: 1px; background: var(--green); }
+
+  p { margin-bottom: 0.9rem; font-weight: 300; }
+  strong { color: var(--heading); font-weight: 500; }
+
+  pre {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--green);
+    border-radius: 0 4px 4px 0;
+    padding: 1rem 1.2rem;
+    overflow-x: auto;
+    margin: 1rem 0 1.2rem;
+    position: relative;
+  }
+
+  pre::before { content: 'VER'; position: absolute; top: 0.5rem; right: 0.8rem; font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.15em; color: var(--muted); }
+
+  code { font-family: var(--mono); font-size: 0.82rem; line-height: 1.7; color: #a8d8b0; }
+
+  .kw-ctrl  { color: #E63946; }
+  .kw-decl  { color: #FFB347; }
+  .kw-call  { color: #74C7EC; }
+  .kw-type  { color: #2DC653; }
+  .kw-ident { color: #CDB4DB; }
+  .kw-str   { color: #A8FF78; }
+  .kw-num   { color: #C77DFF; }
+  .kw-op    { color: #FFD93D; }
+
+  table { width: 100%; border-collapse: collapse; margin: 1rem 0 1.2rem; font-size: 0.85rem; }
+  th { font-family: var(--mono); font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); text-align: left; padding: 0.5rem 1rem; border-bottom: 1px solid var(--border); }
+  td { padding: 0.55rem 1rem; border-bottom: 1px solid var(--border); font-weight: 300; }
+  td:first-child { font-family: var(--mono); font-size: 0.8rem; color: var(--green); }
+  td:last-child  { font-family: var(--mono); font-size: 0.8rem; color: #FFB347; }
+
+  .callout { border: 1px solid var(--border); border-left: 3px solid var(--red); background: var(--bg2); border-radius: 0 4px 4px 0; padding: 0.8rem 1.1rem; margin: 1rem 0; font-size: 0.88rem; }
+  .callout strong { color: var(--red); }
+
+  footer {
+    margin-top: 5rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+  }
+
+  footer span { color: var(--green); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="nav-back">
+    <a href="../REGULA.html">← Back to Index</a>
+  </nav>
+
+  <h1>USUS (Usage)</h1>
+
+  <section class="section">
+    <p class="section-number">§ I</p>
+    <h2>Type System</h2>
+    <p>Veritas passes C types through directly after stripping the English article. Multi-word types and pointers are supported.</p>
+    <table>
+      <thead><tr><th>Veritas</th><th>C Equivalent</th></tr></thead>
+      <tbody>
+        <tr><td>a string</td><td>char* (Managed)</td></tr>
+        <tr><td>an int</td><td>int</td></tr>
+        <tr><td>a float</td><td>float</td></tr>
+        <tr><td>a double complex</td><td>double complex</td></tr>
+        <tr><td>a double pointer</td><td>double*</td></tr>
+        <tr><td>nothing</td><td>void</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="section">
+    <p class="section-number">§ II</p>
+    <h2>Variable Creation</h2>
+    <pre><code><span class="kw-decl">Create</span> <span class="kw-ident">'name'</span> <span class="kw-type">as a string</span>.
+<span class="kw-decl">Create</span> <span class="kw-ident">'x'</span> <span class="kw-type">as a double</span> with value <span class="kw-num">3.14</span>.
+<span class="kw-decl">Create</span> <span class="kw-ident">'c'</span> <span class="kw-type">as a double complex</span> with value <span class="kw-num">1.0</span> <span class="kw-op">plus</span> <span class="kw-num">2.0j</span>.</code></pre>
+  </section>
+
+  <section class="section">
+    <p class="section-number">§ III</p>
+    <h2>Array Creation & List Rules</h2>
+    <p>Lists must follow strict formatting rules:</p>
+    <ul>
+      <li><strong>1 item:</strong> <code>X</code></li>
+      <li><strong>2 items:</strong> <code>X and Y</code></li>
+      <li><strong>3+ items:</strong> <code>X, Y, and Z</code></li>
+    </ul>
+    <pre><code><span class="kw-decl">Create</span> <span class="kw-ident">'data'</span> <span class="kw-type">as a double array</span> of size <span class="kw-num">3</span> with values:
+<span class="kw-num">1.0</span>, <span class="kw-num">2.0</span>, and <span class="kw-num">3.0</span>.</code></pre>
+  </section>
+
+  <section class="section">
+    <p class="section-number">§ IV</p>
+    <h2>Conditionals</h2>
+    <pre><code><span class="kw-ctrl">If</span> <span class="kw-ident">'name'</span> <span class="kw-op">is equal to</span> <span class="kw-str">"Jose"</span>:
+    <span class="kw-call">Call</span> <span class="kw-ident">'printf'</span> with <span class="kw-str">"Hello, Jose!
+"</span>, stored to nothing.
+<span class="kw-ctrl">End if</span> <span class="kw-ident">'name'</span> <span class="kw-op">is equal to</span> <span class="kw-str">"Jose"</span>.</code></pre>
+  </section>
+
+  <section class="section">
+    <p class="section-number">§ V</p>
+    <h2>Loops</h2>
+    <pre><code><span class="kw-ctrl">For every iteration</span> of <span class="kw-ident">'i'</span> from <span class="kw-num">0</span> through <span class="kw-num">10</span>:
+    <span class="kw-cmt">/* 0 to 10 inclusive */</span>
+<span class="kw-ctrl">End iteration</span> of <span class="kw-ident">'i'</span> from <span class="kw-num">0</span> through <span class="kw-num">10</span>.</code></pre>
+  </section>
+
+  <footer>
+    <span>REGULA VERITATIS</span>
+    <span>v1.2.0</span>
+  </footer>
+</div>
+</body>
+</html>

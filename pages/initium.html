@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>INITIUM — Veritas Documentation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=IBM+Plex+Mono:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --red:      #E63946;
+    --green:    #2DC653;
+    --bg:       #2b2b2b;
+    --bg2:      #232323;
+    --bg3:      #303030;
+    --border:   #3d3d3d;
+    --text:     #c8d0c9;
+    --muted:    #6b7270;
+    --heading:  #e8ede9;
+    --mono:     'IBM Plex Mono', monospace;
+    --sans:     'IBM Plex Sans', sans-serif;
+    --serif:    'Cinzel', serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.8;
+    min-height: 100vh;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.04) 2px, rgba(0,0,0,0.04) 4px);
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  .wrap { max-width: 860px; margin: 0 auto; padding: 4rem 2rem 6rem; }
+
+  .nav-back {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    margin-bottom: 2rem;
+  }
+
+  .nav-back a {
+    color: var(--green);
+    text-decoration: none;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .nav-back a:hover { text-decoration: underline; }
+
+  h1 {
+    font-family: var(--serif);
+    font-size: clamp(1.8rem, 5vw, 2.8rem);
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--heading);
+    margin-bottom: 2rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 1rem;
+  }
+
+  .section { margin-top: 3rem; }
+  .section-number { font-family: var(--mono); font-size: 0.65rem; color: var(--muted); letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 0.4rem; }
+  
+  h2 {
+    font-family: var(--serif);
+    font-size: 1.1rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--heading);
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 1.2rem;
+    position: relative;
+  }
+
+  h2::before { content: ''; position: absolute; bottom: -1px; left: 0; width: 2.5rem; height: 1px; background: var(--green); }
+
+  p { margin-bottom: 0.9rem; font-weight: 300; }
+  strong { color: var(--heading); font-weight: 500; }
+
+  pre {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--green);
+    border-radius: 0 4px 4px 0;
+    padding: 1rem 1.2rem;
+    overflow-x: auto;
+    margin: 1rem 0 1.2rem;
+    position: relative;
+  }
+
+  pre::before { content: 'VER'; position: absolute; top: 0.5rem; right: 0.8rem; font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.15em; color: var(--muted); }
+
+  code { font-family: var(--mono); font-size: 0.82rem; line-height: 1.7; color: #a8d8b0; }
+
+  .kw-ctrl  { color: #E63946; }
+  .kw-decl  { color: #FFB347; }
+  .kw-call  { color: #74C7EC; }
+  .kw-type  { color: #2DC653; }
+  .kw-ident { color: #CDB4DB; }
+  .kw-str   { color: #A8FF78; }
+  .kw-num   { color: #C77DFF; }
+
+  footer {
+    margin-top: 5rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+  }
+
+  footer span { color: var(--green); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="nav-back">
+    <a href="../REGULA.html">← Back to Index</a>
+  </nav>
+
+  <h1>INITIUM (Getting Started)</h1>
+
+  <section class="section">
+    <p class="section-number">§ I</p>
+    <h2>Structure of a Program</h2>
+    <p>Every Veritas program must be enclosed in matching declaration statements. The program name must be consistent at the start and end.</p>
+    <pre><code><span class="kw-ctrl">This is the program</span> <span class="kw-ident">'hello_world'</span>.
+
+<span class="kw-cmt">/* Your instructions go here */</span>
+
+<span class="kw-ctrl">End of the program</span> <span class="kw-ident">'hello_world'</span>.</code></pre>
+  </section>
+
+  <section class="section">
+    <p class="section-number">§ II</p>
+    <h2>The Hello World Example</h2>
+    <p>Veritas handles basic I/O through the standard C library. Note that the common <code>stdio.h</code> is included automatically by the intelligent prelude.</p>
+    <pre><code><span class="kw-ctrl">This is the program</span> <span class="kw-ident">'hello'</span>.
+
+<span class="kw-call">Call</span> <span class="kw-ident">'printf'</span> with <span class="kw-str">"Hello, Veritas!
+"</span>, stored to nothing.
+
+<span class="kw-ctrl">End of the program</span> <span class="kw-ident">'hello'</span>.</code></pre>
+  </section>
+
+  <section class="section">
+    <p class="section-number">§ III</p>
+    <h2>Sentence Termination</h2>
+    <p>Consistency is the core of truth. Every instruction must end with a <strong>period (<code>.</code>)</strong>. You may split a single instruction across multiple lines for readability; the compiler will treat it as a single sentence until it encounters the period.</p>
+    <pre><code><span class="kw-decl">Create</span> <span class="kw-ident">'x'</span>
+<span class="kw-type">as an int</span>
+with value <span class="kw-num">42</span>.</code></pre>
+  </section>
+
+  <footer>
+    <span>REGULA VERITATIS</span>
+    <span>v1.2.0</span>
+  </footer>
+</div>
+</body>
+</html>

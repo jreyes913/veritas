@@ -10,9 +10,32 @@ class SemanticError(Exception):
 
 
 class SemanticAnalyzer:
+    BLESSED_FUNCTIONS = {
+        # Strings
+        'join': 'string',
+        'substring': 'string',
+        'to_uppercase': 'string',
+        'to_lowercase': 'string',
+        'regex_search': 'int',
+        'regex_replace': 'string',
+        # Stats
+        'mean': 'double',
+        'standard_deviation': 'double',
+        # Linear Algebra
+        'solve_linear_system': 'void',
+        'matrix_multiply': 'void',
+        'invert_matrix': 'void',
+        # Signal Processing
+        'fft_forward': 'void',
+        'fft_backward': 'void',
+    }
+
     def __init__(self) -> None:
         self.symbols = SymbolTable()
         self._scope_stack: list[dict[str, str]] = [dict()]
+        for func, ret in self.BLESSED_FUNCTIONS.items():
+            # Define blessed functions in a separate way or just skip lookup for them
+            pass
 
     def analyze(self, ast_program: dict) -> SymbolTable:
         for glob in ast_program.get('globals', []):
@@ -99,11 +122,24 @@ class SemanticAnalyzer:
         self._assert_assignable(target_type, value_type, f"assignment to '{target}'")
 
     def _handle_call(self, node: dict) -> None:
+        func_name = node['func']
+        
         for arg in node.get('args', []):
-            self._infer_expr_type(arg, context=f"argument to '{node['func']}'")
+            arg = arg.strip()
+            # If the parser didn't perfectly clean 'and' in some cases
+            if arg.lower().startswith('and '):
+                arg = arg[4:].strip()
+            self._infer_expr_type(arg, context=f"argument to '{func_name}'")
+        
         dest = node.get('dest')
         if dest is not None:
-            self._infer_target_type(dest)
+            dest_type = self._infer_target_type(dest)
+            
+            # Check if it's a blessed function
+            if func_name in self.BLESSED_FUNCTIONS:
+                ret_type = self.BLESSED_FUNCTIONS[func_name]
+                if ret_type != 'void':
+                    self._assert_assignable(dest_type, ret_type, f"result of '{func_name}'")
 
     def _infer_target_type(self, target: str) -> str:
         target = target.strip()
@@ -116,10 +152,18 @@ class SemanticAnalyzer:
                 raise SemanticError(f"Cannot dereference non-pointer '{ptr_name}'")
             return ctype[:-1].strip() or 'void'
 
-        base = target.split('[', 1)[0].strip()
-        ctype = self._lookup(base)
+        if '[' in target and target.endswith(']'):
+            base = target.split('[', 1)[0].strip()
+            ctype = self._lookup(base)
+            if ctype is None:
+                raise SemanticError(f"Undefined variable '{base}'")
+            if ctype.endswith('*'):
+                return ctype[:-1].strip() or 'void'
+            return ctype
+
+        ctype = self._lookup(target)
         if ctype is None:
-            raise SemanticError(f"Undefined variable '{base}'")
+            raise SemanticError(f"Undefined variable '{target}'")
         return ctype
 
     def _infer_expr_type(self, expr: str, context: str = 'expression') -> str:
@@ -127,10 +171,62 @@ class SemanticAnalyzer:
         if not expr:
             return 'void'
 
-        if expr.startswith('(') and expr.endswith(')'):
-            return self._infer_expr_type(expr[1:-1], context=context)
+        if expr.lower().startswith('the quantity '):
+            return self._infer_expr_type(expr[len('the quantity '):].strip(), context=context)
 
-        comp_match = re.search(r'(>=|<=|==|>|<)', expr)
+        if expr.startswith('strcmp(') and expr.endswith(')') or 'strcmp(' in expr:
+            return 'int'
+        
+        if expr == '_Complex_I' or re.fullmatch(r'(\d+\.?\d*|\.\d+)j', expr):
+            return 'double complex'
+
+        if expr.startswith('"') or expr.endswith('"'):
+            # Basic fallback for strings that might have been mangled or have escaped chars
+            return 'string'
+
+        if expr.startswith("'") and expr.endswith("'"):
+            name = expr[1:-1]
+            ctype = self._lookup(name)
+            if ctype is None:
+                raise SemanticError(f"Undefined variable '{expr}'")
+            return ctype
+
+        while expr.startswith('(') and expr.endswith(')'):
+            # Only strip if it's a matching pair of outermost parens
+            depth = 0
+            balanced = True
+            for i in range(len(expr) - 1):
+                if expr[i] == '(': depth += 1
+                elif expr[i] == ')': depth -= 1
+                if depth == 0:
+                    balanced = False
+                    break
+            if balanced:
+                expr = expr[1:-1].strip()
+            else:
+                break
+
+
+        # Helper to find top-level operators
+        def find_top_level_op(pattern: str, text: str) -> re.Match | None:
+            depth = 0
+            in_dquote = False
+            in_squote = False
+            for m in re.finditer(pattern, text):
+                # Check depth at the start of the match
+                snippet = text[:m.start()]
+                depth = snippet.count('(') - snippet.count(')')
+                # Very simple quote check
+                in_dquote = snippet.count('"') % 2 != 0
+                in_squote = snippet.count("'") % 2 != 0
+                if depth == 0 and not in_dquote and not in_squote:
+                    return m
+            return None
+
+        comp_match = find_top_level_op(r'(>=|<=|==|>|<)', expr)
+        if not comp_match:
+            comp_match = find_top_level_op(r'\b(is greater than or equal to|is less than or equal to|is greater than|is less than|is equal to)\b', expr)
+
         if comp_match:
             left = expr[:comp_match.start()].strip()
             right = expr[comp_match.end():].strip()
@@ -142,10 +238,23 @@ class SemanticAnalyzer:
                 )
             return 'int'
 
-        m = re.search(r'\s([+\-*/])\s', expr)
-        if m:
-            left = expr[:m.start()].strip()
-            right = expr[m.end():].strip()
+        # Look for plus/minus last (lowest precedence)
+        arith_match = find_top_level_op(r'\s([+\-])\s', expr)
+        if not arith_match:
+            # Look for Veritas-style plus/minus
+            arith_match = find_top_level_op(r'\s(plus|minus)\s', expr)
+            
+        if not arith_match:
+            # Then look for mult/div
+            arith_match = find_top_level_op(r'\s([*/])\s', expr)
+            
+        if not arith_match:
+            # Look for Veritas-style multiplied/divided
+            arith_match = find_top_level_op(r'\s(multiplied by|divided by)\s', expr)
+
+        if arith_match:
+            left = expr[:arith_match.start()].strip()
+            right = expr[arith_match.end():].strip()
             left_type = self._infer_expr_type(left, context=context)
             right_type = self._infer_expr_type(right, context=context)
             return self._binary_result_type(left_type, right_type, context)
@@ -166,9 +275,6 @@ class SemanticAnalyzer:
         if re.fullmatch(r'-?\d+\.\d*', expr):
             return 'float'
 
-        if expr.startswith('"') and expr.endswith('"'):
-            return 'string'
-
         if '[' in expr and expr.endswith(']'):
             base = expr.split('[', 1)[0].strip()
             ctype = self._lookup(base)
@@ -178,14 +284,25 @@ class SemanticAnalyzer:
                 return ctype[:-1].strip() or 'void'
             return ctype
 
+        if expr.startswith("'") and expr.endswith("'"):
+            name = expr[1:-1]
+            ctype = self._lookup(name)
+            if ctype is None:
+                raise SemanticError(f"Undefined variable '{expr}'")
+            return ctype
+
         ctype = self._lookup(expr)
         if ctype is None:
             raise SemanticError(f"Undefined variable '{expr}'")
         return ctype
 
     def _binary_result_type(self, left: str, right: str, context: str) -> str:
-        numeric = {'int', 'float', 'double'}
+        if left == 'string' and right == 'string':
+            return 'string'
+        numeric = {'int', 'float', 'double', 'double complex'}
         if left in numeric and right in numeric:
+            if 'double complex' in (left, right):
+                return 'double complex'
             if 'double' in (left, right):
                 return 'double'
             if 'float' in (left, right):
@@ -201,5 +318,9 @@ class SemanticAnalyzer:
     def _are_compatible(self, left: str, right: str) -> bool:
         if left == right:
             return True
-        numeric = {'int', 'float', 'double'}
+        if (left == 'string' and right == 'char*') or (left == 'char*' and right == 'string'):
+            return True
+        if left == 'string' and right == 'string':
+            return True
+        numeric = {'int', 'float', 'double', 'double complex'}
         return left in numeric and right in numeric

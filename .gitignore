@@ -1,3 +1,17 @@
 *.c
+*.o
+*.out
 .vscode/
 social-preview*
+*/__pycache__/
+*/*/__pycache__/
+
+# Executables (extensionless binaries)
+tests/basic_math
+tests/complex_math
+tests/finance_analysis
+tests/float_math
+tests/physics_simulation
+tests/statistics_summary
+tests/test_imaginary
+tests/new_features

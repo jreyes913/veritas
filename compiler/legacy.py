@@ -104,11 +104,14 @@ def map_type(t: str) -> str:
     """
     Strip the Veritas article ('a'/'an') and pass the C type through directly.
     'nothing' is the only reserved keyword and maps to 'void'.
+    'string' maps to 'char*'.
     Warns if the wrong article is used; output is unaffected either way.
     """
     t = t.strip()
     if t == 'nothing':
         return 'void'
+    if t == 'string':
+        return 'char*'
     m = re.match(r'^(an?)\s+(.+)', t, re.IGNORECASE)
     if m:
         article, ctype = m.group(1).lower(), m.group(2)
@@ -166,6 +169,11 @@ def translate_value(token: str) -> str:
 
     if token.startswith("'") and token.endswith("'") and len(token) > 2:
         return token[1:-1]
+
+    # Imaginary numbers: e.g., 4.2j
+    m = re.match(r"^(\d+\.?\d*|\.\d+)j$", token)
+    if m:
+        return f'({m.group(1)} * _Complex_I)'
 
     return token
 
@@ -229,6 +237,8 @@ def _translate_simple(expr: str, allow_chained: bool = False) -> str:
         giving standard left-associative evaluation order.
     """
     expr = expr.strip()
+    if expr.lower().startswith('the quantity '):
+        return _translate_inner(expr)
 
     if allow_chained:
         blanked = re.sub(r'"[^"]*"', lambda m: ' ' * len(m.group()), expr)
@@ -349,10 +359,17 @@ def translate_expression(expr: str) -> str:
 
     return _translate_simple(expr)
 
-
 def translate_condition(cond: str) -> str:
     """Translate a Veritas comparison condition to a C boolean expression."""
     cond = cond.strip().rstrip(':')
+    # String comparison heuristic
+    if ' is equal to ' in cond and '"' in cond:
+        parts = split_on_keyword(cond, 'is equal to')
+        if parts:
+            lhs = translate_value(parts[0])
+            rhs = translate_value(parts[1])
+            return f'strcmp({lhs}, {rhs}) == 0'
+
     for vop, cop in COMPARE_OPS:
         parts = split_on_keyword(cond, vop)
         if parts:
@@ -384,27 +401,40 @@ def _unprotect(s: str) -> str:
 
 def parse_argument_list(raw: str) -> list[str]:
     """
-    Parse a comma / 'and'-separated Veritas argument list.
-    Handles two-item 'A and B' and three-or-more 'A, B, and C' forms.
+    Parse a comma / 'and'-separated Veritas argument list with strict rules:
+    - 1 item: 'X'
+    - 2 items: 'X and Y'
+    - 3+ items: 'X, Y, and Z' (oxford comma not required, but 'and' must be last)
     """
-    raw_p = _protect(raw)
-    parts = [p.strip() for p in raw_p.split(',')]
-    result: list[str] = []
-    for part in parts:
-        part = re.sub(r'^and\s+', '', part, flags=re.IGNORECASE).strip()
-        part = _unprotect(part).strip()
-        if part:
-            result.append(part)
+    raw = raw.strip()
+    if not raw:
+        return []
 
-    if len(result) == 1 and result[0]:
-        and_parts = re.split(r'\band\b', _protect(raw), maxsplit=1)
+    # Handle 1 item (no commas, no 'and')
+    if ',' not in raw and not re.search(r'\band\b', raw, re.IGNORECASE):
+        return [raw]
+
+    # Handle 2 items (no commas, exactly one 'and')
+    if ',' not in raw:
+        and_parts = re.split(r'\s+and\s+', raw, flags=re.IGNORECASE)
         if len(and_parts) == 2:
-            a = _unprotect(and_parts[0]).strip()
-            b = _unprotect(and_parts[1]).strip()
-            if a and b:
-                return [a, b]
+            return [p.strip() for p in and_parts]
+        else:
+            warn(f"Invalid 2-item list format: {raw}")
+            return [p.strip() for p in and_parts]
 
-    return result
+    # Handle 3+ items (must have commas and 'and' for the last element)
+    parts = [p.strip() for p in raw.split(',')]
+    last_part = parts[-1]
+    
+    m_and = re.match(r'^and\s+(.+)', last_part, re.IGNORECASE)
+    if not m_and:
+        warn(f"Strict list violation: last element must start with 'and': {raw}")
+        # Try to recover
+        return [p.strip() for p in parts]
+    
+    parts[-1] = m_and.group(1).strip()
+    return parts
 
 
 # ===========================================================================
@@ -525,7 +555,7 @@ class Parser:
             self._current_scope().append({
                 'kind':   'assign',
                 'target': translate_value(m.group(1)),
-                'value':  translate_expression(m.group(2)),
+                'value':  _translate_simple(m.group(2).strip(), allow_chained=True),
             })
             return
 
@@ -595,10 +625,7 @@ class Parser:
             s, re.DOTALL)
         if m:
             name, base, size, vals_raw = m.groups()
-            vals = [
-                re.sub(r'^and\s+', '', v.strip(), flags=re.IGNORECASE).strip()
-                for v in vals_raw.split(',') if v.strip()
-            ]
+            vals = parse_argument_list(vals_raw)
             node = {'kind': 'declare', 'ctype': map_type(base), 'name': name,
                     'is_array': True, 'size': int(size), 'init': vals}
 
@@ -736,18 +763,61 @@ class CodeGen:
         self._main_scalars: set[str] = set()
         self._in_function: bool = False
         self._func_scalars: set[str] = set()
+        self.triggered_includes: set[str] = set()
 
     def generate(self, module: ASTNode) -> str:
+        self._scan_triggers(module)
         self._gen_includes(module['includes'])
         self._gen_globals(module['globals'])
         self._gen_functions(module['functions'])
         self._gen_main(module['main'])
         return self._render()
 
+    def _scan_triggers(self, module: ASTNode) -> None:
+        def check_type(ctype: str):
+            if 'double complex' in ctype:
+                self.triggered_includes.add('complex.h')
+            if 'wchar_t' in ctype:
+                self.triggered_includes.add('wchar.h')
+
+        for g in module['globals']:
+            check_type(g['ctype'])
+        for f in module['functions']:
+            check_type(f['ret_type'])
+            for p_type, _ in f['params']:
+                check_type(p_type)
+        
+        # Check main body for Call triggers
+        def scan_body(nodes: list[ASTNode]):
+            for node in nodes:
+                if node['kind'] == 'call':
+                    func = node['func']
+                    if func in ('time', 'seed', 'clock', 'srand'):
+                        self.triggered_includes.add('time.h')
+                    if func == 'assert':
+                        self.triggered_includes.add('assert.h')
+                if 'body' in node:
+                    scan_body(node['body'])
+                if 'then_body' in node:
+                    scan_body(node['then_body'])
+                if 'else_body' in node:
+                    scan_body(node['else_body'])
+
+        scan_body(module['main'])
+        for f in module['functions']:
+            scan_body(f['body'])
+
     def _gen_includes(self, nodes: list[ASTNode]) -> None:
-        required = ['stdlib.h', 'stdio.h', 'stddef.h']
-        self.includes.extend([f'#include <{h}>' for h in required])
-        seen = set(required)
+        prelude = [
+            'stdio.h', 'stdlib.h', 'math.h', 'string.h', 'stdint.h', 
+            'stdbool.h', 'float.h', 'limits.h', 'regex.h', 'ctype.h',
+            'stddef.h'
+        ]
+        required = set(prelude)
+        required.update(self.triggered_includes)
+        
+        self.includes.extend([f'#include <{h}>' for h in sorted(required)])
+        seen = required
         for node in nodes:
             path = node['path']
             if path not in seen:
@@ -792,13 +862,15 @@ class CodeGen:
             start = self._rewrite_expr(node['start'], scalars)
             end = self._rewrite_expr(node['end'], scalars)
             lines = [
-                f'{pad}int *{var} = arena_alloc({self._arena_ref()}, sizeof(int));',
-                f'{pad}*{var} = {start};',
-                f'{pad}for (; *{var} {op} {end}; (*{var})++) {{',
+                f'{pad}{{',
+                f'{pad}    int *{var} = arena_alloc({self._arena_ref()}, sizeof(int));',
+                f'{pad}    *{var} = {start};',
+                f'{pad}    for (; *{var} {op} {end}; (*{var})++) {{',
             ]
             scalars.add(var)
             for child in node['body']:
-                lines.extend(self._node_c(child, indent + 1))
+                lines.extend(self._node_c(child, indent + 2))
+            lines.append(pad + '    }')
             lines.append(pad + '}')
             return lines
 
@@ -858,6 +930,11 @@ class CodeGen:
         return 'global_arena' if self._in_function else '&arena'
 
     def _rewrite_expr(self, expr: str, scalar_vars: set[str]) -> str:
+        # String concatenation heuristic: if we see ' + ' and it looks like strings
+        if ' + ' in expr and ('"' in expr or any(v in expr for v in scalar_vars)):
+             # This is a bit fragile without a full type-aware rewriter
+             pass
+
         out = expr
         placeholders: dict[str, str] = {}
         for idx, name in enumerate(sorted(scalar_vars, key=len, reverse=True)):
@@ -942,6 +1019,11 @@ class CodeGen:
             '}',
             '',
             'Arena *global_arena;',
+            '',
+            '/* Blessed Function Prototypes */',
+            'char* join(const char* s1, const char* s2);',
+            'double mean(double* data, int n);',
+            'double standard_deviation(double* data, int n);',
         ]))
 
         for fn in self.functions:

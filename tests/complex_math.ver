@@ -1,0 +1,26 @@
+This is the program 'complex_math_demo'.
+
+/* Euler's formula: e^(ix) = cos(x) + i*sin(x) */
+Create 'x' as a double with value 3.141592654.
+Create 'euler_complex' as a double complex.
+
+/* Complex arithmetic with the new 'j' literal */
+Create 'c1' as a double complex with value 1.5 plus 2.5j.
+Create 'c2' as a double complex with value 0.5 minus 1.0j.
+Create 'result' as a double complex with value the quantity 'c1' multiplied by 'c2'.
+
+/* Calculate components for Euler's formula */
+Create 're' as a double.
+Create 'im' as a double.
+Call 'cos' with 'x', stored to 're'.
+Call 'sin' with 'x', stored to 'im'.
+
+/* Compose using the 1j literal */
+Replace 'euler_complex' with the quantity 're' plus 'im' multiplied by 1j.
+
+Call 'printf' with "Euler complex real: %.4f, imaginary: %.4f\n", 're', and 'im' stored to nothing.
+Call 'creal' with 'result', stored to 're'.
+Call 'cimag' with 'result', stored to 'im'.
+Call 'printf' with "Complex product: %.4f + %.4fi\n", 're', and 'im' stored to nothing.
+
+End of the program 'complex_math_demo'.

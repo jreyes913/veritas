@@ -587,7 +587,7 @@ done
 # --- 4. Compile ------------------------------------------------------------
 
 echo "gcc linker flags: ${linker_flags[*]:-<none>}"
-gcc -o "${filename}" "${filename}.c" "${linker_flags[@]+"${linker_flags[@]}"}"
+gcc -o "${filename}" "${filename}.c" compiler/runtime.c "${linker_flags[@]+"${linker_flags[@]}"}"
 
 # --- 5. Clean up intermediate C file (uncomment to enable) ----------------
 #rm "${filename}.c"
