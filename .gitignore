@@ -15,3 +15,6 @@ tests/physics_simulation
 tests/statistics_summary
 tests/test_imaginary
 tests/new_features
+
+# Keep checked-in runtime support source
+!compiler/runtime.c
