@@ -21,14 +21,60 @@ class SemanticAnalyzer:
         # Stats
         'mean': 'double',
         'standard_deviation': 'double',
+        'sample_mean': 'double',
+        'population_mean': 'double',
+        'sample_variance': 'double',
+        'population_variance': 'double',
+        'sample_std': 'double',
+        'population_std': 'double',
+        'median': 'double',
+        'mode': 'double',
+        'quantile': 'double',
+        'iqr': 'double',
+        'covariance': 'double',
+        'correlation': 'double',
+        'skewness': 'double',
+        'kurtosis': 'double',
+        # Inferential Statistics & Probability
+        't_test': 'double',
+        'paired_t_test': 'double',
+        'chi_square_test': 'double',
+        'anova_one_way': 'double',
+        'mean_confidence_interval': 'void',
+        'proportion_confidence_interval': 'void',
+        'normal_pdf': 'double',
+        'normal_cdf': 'double',
+        'normal_inverse_cdf': 'double',
+        'student_t_cdf': 'double',
+        'student_t_inverse_cdf': 'double',
+        'chi_square_cdf': 'double',
+        'chi_square_inverse_cdf': 'double',
+        'f_cdf': 'double',
+        'f_inverse_cdf': 'double',
+        'sample_normal': 'double',
+        'sample_uniform': 'double',
+        'sample_poisson': 'double',
         # Linear Algebra
         'solve_linear_system': 'void',
         'matrix_multiply': 'void',
         'invert_matrix': 'void',
+        'determinant': 'double',
+        'trace': 'double',
+        'transpose': 'void',
+        'eigenvalues': 'void',
+        'eigenvectors': 'void',
+        'lu_decompose': 'void',
+        'qr_decompose': 'void',
+        'svd': 'void',
+        'vector_norm': 'double',
+        'matrix_norm': 'double',
+        'condition_number': 'double',
         # Signal Processing
         'fft_forward': 'void',
         'fft_backward': 'void',
     }
+
+    NUMERIC_PRIMITIVES = {'int', 'float', 'double', 'double complex'}
 
     def __init__(self) -> None:
         self.symbols = SymbolTable()
@@ -101,10 +147,31 @@ class SemanticAnalyzer:
     def _handle_declare(self, node: dict, scope: str) -> None:
         name = node['name']
         ctype = node['ctype']
-        self._define(name, ctype, scope)
+        container = node.get('container', 'array' if node.get('is_array') else 'scalar')
+
+        if container == 'vector' and not self._is_numeric_type(ctype):
+            raise SemanticError(
+                f"Vector '{name}' must use a numeric primitive type, got {ctype}"
+            )
+
+        if container == 'array' and self._is_numeric_type(ctype):
+            raise SemanticError(
+                f"Array '{name}' is restricted to non-numeric types, got {ctype}. "
+                "Use a vector for numeric sequences."
+            )
+
+        declared_type = ctype
+        if container == 'vector':
+            declared_type = f'vector<{ctype}>'
+        elif container == 'array':
+            declared_type = f'array<{ctype}>'
+        elif container == 'matrix':
+            declared_type = 'matrix'
+
+        self._define(name, declared_type, scope)
 
         init = node.get('init')
-        if node.get('is_array'):
+        if container in {'array', 'vector'}:
             if init:
                 for value in init:
                     value_type = self._infer_expr_type(value, context=f"initializer for '{name}'")
@@ -157,6 +224,10 @@ class SemanticAnalyzer:
             ctype = self._lookup(base)
             if ctype is None:
                 raise SemanticError(f"Undefined variable '{base}'")
+            if ctype.startswith('vector<') and ctype.endswith('>'):
+                return ctype[7:-1].strip()
+            if ctype.startswith('array<') and ctype.endswith('>'):
+                return ctype[6:-1].strip()
             if ctype.endswith('*'):
                 return ctype[:-1].strip() or 'void'
             return ctype
@@ -334,8 +405,27 @@ class SemanticAnalyzer:
     def _binary_result_type(self, left: str, right: str, context: str) -> str:
         if left == 'string' and right == 'string':
             return 'string'
-        numeric = {'int', 'float', 'double', 'double complex'}
-        if left in numeric and right in numeric:
+
+        left_container = self._container_of(left)
+        right_container = self._container_of(right)
+
+        if left_container == 'matrix' or right_container == 'matrix':
+            raise SemanticError(
+                f"Matrix arithmetic is not supported in scalar expressions ({context}); "
+                "use dedicated matrix operations/functions."
+            )
+
+        if left_container == 'array' or right_container == 'array':
+            raise SemanticError(
+                f"Array values are non-numeric and cannot be used in math ({context})."
+            )
+
+        if left_container == 'vector' and right_container in {'vector', 'scalar'}:
+            return left
+        if right_container == 'vector' and left_container == 'scalar':
+            return right
+
+        if self._is_numeric_type(left) and self._is_numeric_type(right):
             if 'double complex' in (left, right):
                 return 'double complex'
             if 'double' in (left, right):
@@ -353,9 +443,29 @@ class SemanticAnalyzer:
     def _are_compatible(self, left: str, right: str) -> bool:
         if left == right:
             return True
+
         if (left == 'string' and right == 'char*') or (left == 'char*' and right == 'string'):
             return True
-        if left == 'string' and right == 'string':
-            return True
-        numeric = {'int', 'float', 'double', 'double complex'}
-        return left in numeric and right in numeric
+
+        if self._container_of(left) == 'matrix' or self._container_of(right) == 'matrix':
+            return left == right
+
+        if self._container_of(left) == 'array' or self._container_of(right) == 'array':
+            return left == right
+
+        if self._container_of(left) == 'vector' or self._container_of(right) == 'vector':
+            return left == right
+
+        return self._is_numeric_type(left) and self._is_numeric_type(right)
+
+    def _is_numeric_type(self, ctype: str) -> bool:
+        return ctype in self.NUMERIC_PRIMITIVES
+
+    def _container_of(self, ctype: str) -> str:
+        if ctype.startswith('vector<') and ctype.endswith('>'):
+            return 'vector'
+        if ctype == 'matrix':
+            return 'matrix'
+        if ctype.startswith('array<') and ctype.endswith('>'):
+            return 'array'
+        return 'scalar'

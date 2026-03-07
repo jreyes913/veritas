@@ -630,34 +630,70 @@ class Parser:
         node: Optional[ASTNode] = None
 
         m = re.match(
-            r"Create '(\w+)' as an?\s+([\w ]+?) array of size (\d+) with values:(.+)$",
+            r"Create '(\w+)' as an?\s+([\w ]+?) vector of size (\d+) with values:(.+)$",
             s, re.DOTALL)
         if m:
             name, base, size, vals_raw = m.groups()
             vals = parse_argument_list(vals_raw)
-            node = {'kind': 'declare', 'ctype': map_type(base), 'name': name,
-                    'is_array': True, 'size': int(size), 'init': vals}
+            node = {
+                'kind': 'declare', 'container': 'vector', 'ctype': map_type(base), 'name': name,
+                'is_array': True, 'size': int(size), 'init': vals,
+            }
+
+        if node is None:
+            m = re.match(r"Create '(\w+)' as an?\s+([\w ]+?) vector of size (\d+)", s)
+            if m:
+                node = {
+                    'kind': 'declare', 'container': 'vector', 'ctype': map_type(m.group(2)),
+                    'name': m.group(1), 'is_array': True, 'size': int(m.group(3)), 'init': None,
+                }
+
+        m = re.match(
+            r"Create '(\w+)' as an?\s+([\w ]+?) array of size (\d+) with values:(.+)$",
+            s, re.DOTALL)
+        if node is None and m:
+            name, base, size, vals_raw = m.groups()
+            vals = parse_argument_list(vals_raw)
+            node = {
+                'kind': 'declare', 'container': 'array', 'ctype': map_type(base), 'name': name,
+                'is_array': True, 'size': int(size), 'init': vals,
+            }
 
         if node is None:
             m = re.match(r"Create '(\w+)' as an?\s+([\w ]+?) array of size (\d+)", s)
             if m:
-                node = {'kind': 'declare', 'ctype': map_type(m.group(2)),
-                        'name': m.group(1), 'is_array': True,
-                        'size': int(m.group(3)), 'init': None}
+                node = {
+                    'kind': 'declare', 'container': 'array', 'ctype': map_type(m.group(2)),
+                    'name': m.group(1), 'is_array': True, 'size': int(m.group(3)), 'init': None,
+                }
+
+        if node is None:
+            m = re.match(r"Create '(\w+)' as an?\s+matrix(?: with columns:\s*(.+))?$", s, re.DOTALL)
+            if m:
+                cols_raw = (m.group(2) or '').strip()
+                columns = parse_argument_list(cols_raw) if cols_raw else []
+                node = {
+                    'kind': 'declare', 'container': 'matrix', 'ctype': 'matrix',
+                    'name': m.group(1), 'is_array': False, 'size': None, 'init': None,
+                    'columns': columns,
+                }
 
         if node is None:
             m = re.match(r"Create '(\w+)' as an?\s+(.+?) with value (.+)$", s)
             if m:
-                node = {'kind': 'declare', 'ctype': map_type(m.group(2).strip()),
-                        'name': m.group(1), 'is_array': False, 'size': None,
-                        'init': translate_expression(m.group(3).strip())}
+                node = {
+                    'kind': 'declare', 'container': 'scalar', 'ctype': map_type(m.group(2).strip()),
+                    'name': m.group(1), 'is_array': False, 'size': None,
+                    'init': translate_expression(m.group(3).strip()),
+                }
 
         if node is None:
             m = re.match(r"Create '(\w+)' as an?\s+(.+)$", s)
             if m:
-                node = {'kind': 'declare', 'ctype': map_type(m.group(2).strip()),
-                        'name': m.group(1), 'is_array': False,
-                        'size': None, 'init': None}
+                node = {
+                    'kind': 'declare', 'container': 'scalar', 'ctype': map_type(m.group(2).strip()),
+                    'name': m.group(1), 'is_array': False, 'size': None, 'init': None,
+                }
 
         if node is None:
             self._current_scope().append(
@@ -805,6 +841,31 @@ class CodeGen:
                         self.triggered_includes.add('time.h')
                     if func == 'assert':
                         self.triggered_includes.add('assert.h')
+                    if func in {
+                        'mean', 'standard_deviation', 'sample_mean', 'population_mean',
+                        'sample_variance', 'population_variance', 'sample_std', 'population_std',
+                        'median', 'mode', 'quantile', 'iqr', 'covariance', 'correlation',
+                        'skewness', 'kurtosis', 't_test', 'paired_t_test', 'chi_square_test',
+                        'anova_one_way', 'mean_confidence_interval',
+                        'proportion_confidence_interval', 'normal_pdf', 'normal_cdf',
+                        'normal_inverse_cdf', 'student_t_cdf', 'student_t_inverse_cdf',
+                        'chi_square_cdf', 'chi_square_inverse_cdf', 'f_cdf',
+                        'f_inverse_cdf', 'sample_normal', 'sample_uniform', 'sample_poisson',
+                    }:
+                        self.triggered_includes.update({
+                            'gsl/gsl_statistics.h', 'gsl/gsl_statistics_double.h',
+                            'gsl/gsl_cdf.h', 'gsl/gsl_randist.h', 'gsl/gsl_rng.h'
+                        })
+                    if func in {
+                        'solve_linear_system', 'matrix_multiply', 'invert_matrix',
+                        'determinant', 'trace', 'transpose', 'eigenvalues', 'eigenvectors',
+                        'lu_decompose', 'qr_decompose', 'svd', 'vector_norm',
+                        'matrix_norm', 'condition_number',
+                    }:
+                        self.triggered_includes.update({
+                            'gsl/gsl_matrix.h', 'gsl/gsl_vector.h', 'gsl/gsl_blas.h',
+                            'gsl/gsl_linalg.h', 'gsl/gsl_eigen.h'
+                        })
                 if 'body' in node:
                     scan_body(node['body'])
                 if 'then_body' in node:
@@ -903,14 +964,18 @@ class CodeGen:
     def _decl_c(self, node: ASTNode, scalar_vars: set[str], arena_ref: str) -> str:
         ctype = node['ctype']
         name = node['name']
+        container = node.get('container', 'array' if node.get('is_array') else 'scalar')
 
-        if node['is_array']:
+        if container in {'array', 'vector'}:
             size = node['size']
             lines = [f'{ctype} *{name} = arena_alloc({arena_ref}, {size} * sizeof({ctype}));']
             if node['init']:
                 for idx, val in enumerate(node['init']):
                     lines.append(f'{name}[{idx}] = {self._rewrite_expr(val, scalar_vars)};')
             return ' '.join(lines)
+
+        if container == 'matrix':
+            return f'void *{name} = NULL; /* Matrix runtime object */'
 
         scalar_vars.add(name)
         if node['init'] is not None:
@@ -921,9 +986,14 @@ class CodeGen:
     def _global_decl_c(self, node: ASTNode) -> str:
         ctype = node['ctype']
         name = node['name']
-        if node['is_array']:
+        container = node.get('container', 'array' if node.get('is_array') else 'scalar')
+        if container in {'array', 'vector'}:
             self.global_inits.append(self._decl_c(node, self._main_scalars, arena_ref='&arena'))
             return f'{ctype} *{name};'
+
+        if container == 'matrix':
+            self.global_inits.append(f'{name} = NULL;')
+            return f'void *{name};'
 
         self._main_scalars.add(name)
         if node['init'] is None:
@@ -1033,6 +1103,52 @@ class CodeGen:
             'char* join(const char* s1, const char* s2);',
             'double mean(double* data, int n);',
             'double standard_deviation(double* data, int n);',
+            'double sample_mean(double* data, int n);',
+            'double population_mean(double* data, int n);',
+            'double sample_variance(double* data, int n);',
+            'double population_variance(double* data, int n);',
+            'double sample_std(double* data, int n);',
+            'double population_std(double* data, int n);',
+            'double median(double* data, int n);',
+            'double mode(double* data, int n);',
+            'double quantile(double* data, int n, double q);',
+            'double iqr(double* data, int n);',
+            'double covariance(double* x, double* y, int n);',
+            'double correlation(double* x, double* y, int n);',
+            'double skewness(double* data, int n);',
+            'double kurtosis(double* data, int n);',
+            'double t_test(double* x, int n1, double* y, int n2);',
+            'double paired_t_test(double* x, double* y, int n);',
+            'double chi_square_test(double* observed, double* expected, int n);',
+            'double anova_one_way(double* groups, int* sizes, int k);',
+            'void mean_confidence_interval(double* data, int n, double alpha, double* lower, double* upper);',
+            'void proportion_confidence_interval(int successes, int trials, double alpha, double* lower, double* upper);',
+            'double normal_pdf(double x, double mu, double sigma);',
+            'double normal_cdf(double x, double mu, double sigma);',
+            'double normal_inverse_cdf(double p, double mu, double sigma);',
+            'double student_t_cdf(double t, double dof);',
+            'double student_t_inverse_cdf(double p, double dof);',
+            'double chi_square_cdf(double x, double dof);',
+            'double chi_square_inverse_cdf(double p, double dof);',
+            'double f_cdf(double x, double dof1, double dof2);',
+            'double f_inverse_cdf(double p, double dof1, double dof2);',
+            'double sample_normal(double mu, double sigma);',
+            'double sample_uniform(double a, double b);',
+            'double sample_poisson(double lambda);',
+            'void solve_linear_system(double* a, double* b, int n, double* x);',
+            'void matrix_multiply(double* a, double* b, int rows_a, int cols_a, int cols_b, double* out);',
+            'void invert_matrix(double* a, int n, double* out);',
+            'double determinant(double* a, int n);',
+            'double trace(double* a, int n);',
+            'void transpose(double* a, int rows, int cols, double* out);',
+            'void eigenvalues(double* a, int n, double* real_parts, double* imag_parts);',
+            'void eigenvectors(double* a, int n, double* vecs);',
+            'void lu_decompose(double* a, int n, double* l, double* u);',
+            'void qr_decompose(double* a, int rows, int cols, double* q, double* r);',
+            'void svd(double* a, int rows, int cols, double* u, double* s, double* vt);',
+            'double vector_norm(double* x, int n);',
+            'double matrix_norm(double* a, int rows, int cols);',
+            'double condition_number(double* a, int n);',
         ]))
 
         for fn in self.functions:
