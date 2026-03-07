@@ -103,7 +103,7 @@ def run(source: str, args: argparse.Namespace) -> str:
     if args.ir:
         return format_ir(ir_program)
 
-    return generate_c(ir_program)
+    return generate_c(ir_program, symbols=symbol_table)
 
 
 def main() -> None:

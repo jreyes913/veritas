@@ -1,0 +1,29 @@
+This is the program 'float_math_demo'.
+
+/* Float scalars */
+Create 'a' as an int with value 2.
+Create 'b' as a float with value 3.5.
+Create 'mix' as a float with value the quantity 'a' plus 'b'.
+Create 'cube' as a float with value 'b' raised to the 3.0.
+
+/* Float Vector */
+Create 'f_vec1' as a float vector of size 2 with values: 1.1 and 2.2.
+Create 'f_vec2' as a float vector of size 2 with values: 3.3 and 4.4.
+Create 'f_sum' as a float vector of size 2.
+
+/* Matrix: math object */
+Create 'weights' as a matrix.
+
+/* Array: Metadata */
+Create 'tags' as a string array of size 2 with values: "Sensor_A" and "Sensor_B".
+
+/* Perform vector math */
+Replace 'f_sum' with the quantity 'f_vec1' plus 'f_vec2'.
+
+/* Output results after math */
+Create 't1' as an element of 'tags' at index 0.
+Create 'v1' as a float.
+Replace 'v1' with an element of 'f_sum' at index 0.
+Call 'printf' with "%s readings[0]: %.2f\n", 't1', and 'v1' stored to nothing.
+
+End of the program 'float_math_demo'.

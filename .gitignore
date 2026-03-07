@@ -7,12 +7,13 @@ social-preview*
 */*/__pycache__/
 
 # Executables (extensionless binaries)
-tests/basic_math
-tests/complex_math
-tests/finance_analysis
-tests/float_math
-tests/physics_simulation
-tests/statistics_summary
+examples/basic_math
+examples/complex_math
+examples/finance_analysis
+examples/finance_engineering
+examples/float_math
+examples/physics_simulation
+examples/statistics_summary
 tests/test_imaginary
 tests/new_features
 

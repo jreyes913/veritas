@@ -1,0 +1,44 @@
+This is the program 'physics_simulation'.
+
+/* Model an object falling in gravity in 3D using Vectors */
+Create 'g_vec' as a double vector of size 3 with values: 0.0, 0.0, and -9.81.
+Create 'pos' as a double vector of size 3 with values: 0.0, 0.0, and 100.0.
+Create 'vel' as a double vector of size 3 with values: 10.0, 5.0, and 0.0.
+
+Create 'dt' as a double with value 0.1.
+Create 't' as a double with value 0.0.
+
+/* Component scalars for math */
+Create 'v_i' as a double.
+Create 'g_i' as a double.
+Create 'p_j' as a double.
+Create 'v_j_now' as a double.
+Create 'pz' as a double.
+Create 'v_sq' as a double.
+
+Create 'i' as an int.
+Create 'j' as an int.
+
+For every iteration of 'step' from 1 to 5:
+    /* Update velocity: vel = vel + g * dt */
+    For every iteration of 'i' from 0 to 3:
+        Replace 'v_i' with an element of 'vel' at index 'i'.
+        Replace 'g_i' with an element of 'g_vec' at index 'i'.
+        Replace 'vel' at index 'i' with the quantity 'v_i' plus 'g_i' multiplied by 'dt'.
+    End iteration of 'i' from 0 to 3.
+
+    /* Update position: pos = pos + vel * dt */
+    For every iteration of 'j' from 0 to 3:
+        Replace 'p_j' with an element of 'pos' at index 'j'.
+        Replace 'v_j_now' with an element of 'vel' at index 'j'.
+        Replace 'pos' at index 'j' with the quantity 'p_j' plus 'v_j_now' multiplied by 'dt'.
+    End iteration of 'j' from 0 to 3.
+
+    Replace 't' with 't' plus 'dt'.
+    Replace 'pz' with an element of 'pos' at index 2.
+    /* Calculate v_sq using the last fetched v_i */
+    Replace 'v_sq' with 'v_i' raised to the 2.
+    Call 'printf' with "Time: %.1fs, Height: %.2fm (v_i^2 = %.2f)\n", 't', 'pz', and 'v_sq' stored to nothing.
+End iteration of 'step' from 1 to 5.
+
+End of the program 'physics_simulation'.

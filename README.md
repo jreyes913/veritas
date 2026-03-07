@@ -133,7 +133,8 @@ Restart VS Code to activate.
 │   ├── semantic/            # Semantic Analyzer and Symbol Table
 │   └── ir/                  # Intermediate Representation and Lowering
 ├── veritasc.sh              # Build script (transpile + compile + link)
-├── tests/                   # Test suite (finance, physics, math, statistics)
+├── examples/                # Example programs (finance, physics, math, statistics)
+├── tests/                   # Compiler unit tests and error handling cases
 ├── .gitignore               # .gitignore (excludes binaries and .c files)
 ├── veritas-language/        # VS Code extension
 └── README.md

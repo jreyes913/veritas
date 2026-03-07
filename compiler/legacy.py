@@ -156,27 +156,29 @@ def translate_value(token: str) -> str:
     """Translate a single Veritas value token to its C representation."""
     token = token.strip()
 
-    m = re.match(r"an element of '(\w+)' at index '(\w+)'", token)
+    # Match "an element of 'var' at index 'idx'" (allowing for protected spaces \x00)
+    m = re.match(r"an[\s\x00]element[\s\x00]of[\s\x00]'(\w+)'[\s\x00]at[\s\x00]index[\s\x00](?:'(.+?)'|(\w+))", token)
     if m:
-        return f'{m.group(1)}[{m.group(2)}]'
+        idx = m.group(2) or m.group(3)
+        return f'{m.group(1)}[{_unprotect(idx)}]'
 
-    m = re.match(r"value at '(\w+)'", token)
+    m = re.match(r"value[\s\x00]at[\s\x00]'(\w+)'", token)
     if m:
         return f'*{m.group(1)}'
 
-    m = re.match(r"the address of '(\w+)'", token)
+    m = re.match(r"the[\s\x00]address[\s\x00]of[\s\x00]'(\w+)'", token)
     if m:
         return f'&{m.group(1)}'
 
     if token.startswith("'") and token.endswith("'") and len(token) > 2:
-        return token[1:-1]
+        return _unprotect(token[1:-1])
 
     # Imaginary numbers: e.g., 4.2j
     m = re.match(r"^(\d+\.?\d*|\.\d+)j$", token)
     if m:
         return f'({m.group(1)} * _Complex_I)'
 
-    return token
+    return _unprotect(token)
 
 
 def split_on_keyword(text: str, keyword: str) -> Optional[tuple[str, str]]:
@@ -394,6 +396,8 @@ _PROTECTED_PHRASES: list[str] = [
     'an element of',
     'the address of',
     'value at',
+    'the quantity',
+    'at index',
 ]
 _NULL = '\x00'
 
@@ -412,8 +416,8 @@ def parse_argument_list(raw: str) -> list[str]:
     """
     Parse a comma / 'and'-separated Veritas argument list with strict rules:
     - 1 item: 'X'
-    - 2 items: 'X and Y'
-    - 3+ items: 'X, Y, and Z' (oxford comma not required, but 'and' must be last)
+    - 2 items: 'X and Y' (NO COMMAS)
+    - 3+ items: 'X, Y, and Z' (Oxford comma required)
     """
     raw = raw.strip()
     if not raw:
@@ -429,17 +433,27 @@ def parse_argument_list(raw: str) -> list[str]:
         if len(and_parts) == 2:
             return [p.strip() for p in and_parts]
         else:
-            warn(f"Invalid 2-item list format: {raw}")
-            return [p.strip() for p in and_parts]
+            # Maybe it's a 3+ item list missing commas? Or malformed.
+            pass
+
+    # Check for 2-item list with comma violation: "X, and Y"
+    if raw.count(',') == 1:
+        parts = [p.strip() for p in raw.split(',')]
+        if len(parts) == 2 and re.match(r'^and\s+', parts[1], re.IGNORECASE):
+            warn(f"Grammar violation: 2-item list should not have a comma: {raw}")
+            parts[1] = re.sub(r'^and\s+', '', parts[1], flags=re.IGNORECASE).strip()
+            return parts
 
     # Handle 3+ items (must have commas and 'and' for the last element)
     parts = [p.strip() for p in raw.split(',')]
+    if len(parts) < 3:
+        # If we got here and parts < 3, it's likely a malformed 2-item list
+        return parts
+
     last_part = parts[-1]
-    
     m_and = re.match(r'^and\s+(.+)', last_part, re.IGNORECASE)
     if not m_and:
         warn(f"Strict list violation: last element must start with 'and': {raw}")
-        # Try to recover
         return [p.strip() for p in parts]
     
     parts[-1] = m_and.group(1).strip()
@@ -559,6 +573,17 @@ class Parser:
             self._end_if()
             return
 
+        m = re.match(r"Replace (.+?) at index (.+?) with (.+)$", s)
+        if m:
+            target = translate_value(m.group(1))
+            idx = translate_value(m.group(2))
+            self._current_scope().append({
+                'kind':   'assign',
+                'target': f'{target}[{idx}]',
+                'value':  _translate_simple(m.group(3).strip(), allow_chained=True),
+            })
+            return
+
         m = re.match(r"Replace (.+?) with (.+)$", s)
         if m:
             self._current_scope().append({
@@ -629,46 +654,62 @@ class Parser:
     def _handle_create(self, s: str) -> None:
         node: Optional[ASTNode] = None
 
-        m = re.match(
-            r"Create '(\w+)' as an?\s+([\w ]+?) vector of size (\d+) with values:(.+)$",
-            s, re.DOTALL)
-        if m:
-            name, base, size, vals_raw = m.groups()
-            vals = parse_argument_list(vals_raw)
+        # 1. NEW: Create 'label' as an element of 'labels' at index 0.
+        m_idx = re.match(r"Create '(\w+)' as an element of '(\w+)' at index (?:'(.+?)'|(\w+))$", s)
+        if m_idx:
+            name, container, idx_val = m_idx.group(1), m_idx.group(2), (m_idx.group(3) or m_idx.group(4))
+            init_c = f"{container}[{idx_val}]"
             node = {
-                'kind': 'declare', 'container': 'vector', 'ctype': map_type(base), 'name': name,
-                'is_array': True, 'size': int(size), 'init': vals,
+                'kind': 'declare', 'container': 'indexed_scalar', 'name': name,
+                'source_container': container, 'index': idx_val, 'ctype': 'auto',
+                'is_array': False, 'size': None, 'init': init_c
             }
 
+        # 2. Vector with values
         if node is None:
-            m = re.match(r"Create '(\w+)' as an?\s+([\w ]+?) vector of size (\d+)", s)
+            m = re.match(r"Create '(\w+)' as an? ([\w ]+?) vector of size (\d+) with values:(.+)$", s, re.DOTALL)
             if m:
+                name, base, size, vals_raw = m.groups()
+                vals = parse_argument_list(vals_raw)
                 node = {
-                    'kind': 'declare', 'container': 'vector', 'ctype': map_type(m.group(2)),
-                    'name': m.group(1), 'is_array': True, 'size': int(m.group(3)), 'init': None,
+                    'kind': 'declare', 'container': 'vector', 'ctype': map_type(base), 'name': name,
+                    'is_array': True, 'size': int(size), 'init': vals,
                 }
 
-        m = re.match(
-            r"Create '(\w+)' as an?\s+([\w ]+?) array of size (\d+) with values:(.+)$",
-            s, re.DOTALL)
-        if node is None and m:
-            name, base, size, vals_raw = m.groups()
-            vals = parse_argument_list(vals_raw)
-            node = {
-                'kind': 'declare', 'container': 'array', 'ctype': map_type(base), 'name': name,
-                'is_array': True, 'size': int(size), 'init': vals,
-            }
-
+        # 3. Vector without values
         if node is None:
-            m = re.match(r"Create '(\w+)' as an?\s+([\w ]+?) array of size (\d+)", s)
+            m = re.match(r"Create '(\w+)' as an? ([\w ]+?) vector of size (\d+)$", s)
             if m:
+                name, base, size = m.groups()
                 node = {
-                    'kind': 'declare', 'container': 'array', 'ctype': map_type(m.group(2)),
-                    'name': m.group(1), 'is_array': True, 'size': int(m.group(3)), 'init': None,
+                    'kind': 'declare', 'container': 'vector', 'ctype': map_type(base),
+                    'name': name, 'is_array': True, 'size': int(size), 'init': None,
                 }
 
+        # 4. Array with values
         if node is None:
-            m = re.match(r"Create '(\w+)' as an?\s+matrix(?: with columns:\s*(.+))?$", s, re.DOTALL)
+            m = re.match(r"Create '(\w+)' as an? ([\w ]+?) array of size (\d+) with values:(.+)$", s, re.DOTALL)
+            if m:
+                name, base, size, vals_raw = m.groups()
+                vals = parse_argument_list(vals_raw)
+                node = {
+                    'kind': 'declare', 'container': 'array', 'ctype': map_type(base), 'name': name,
+                    'is_array': True, 'size': int(size), 'init': vals,
+                }
+
+        # 5. Array without values
+        if node is None:
+            m = re.match(r"Create '(\w+)' as an? ([\w ]+?) array of size (\d+)$", s)
+            if m:
+                name, base, size = m.groups()
+                node = {
+                    'kind': 'declare', 'container': 'array', 'ctype': map_type(base),
+                    'name': name, 'is_array': True, 'size': int(size), 'init': None,
+                }
+
+        # 6. Matrix
+        if node is None:
+            m = re.match(r"Create '(\w+)' as an? matrix(?: with columns:\s*(.+))?$", s, re.DOTALL)
             if m:
                 cols_raw = (m.group(2) or '').strip()
                 columns = parse_argument_list(cols_raw) if cols_raw else []
@@ -678,8 +719,9 @@ class Parser:
                     'columns': columns,
                 }
 
+        # 7. Scalar with value
         if node is None:
-            m = re.match(r"Create '(\w+)' as an?\s+(.+?) with value (.+)$", s)
+            m = re.match(r"Create '(\w+)' as an? (.+?) with value (.+)$", s)
             if m:
                 node = {
                     'kind': 'declare', 'container': 'scalar', 'ctype': map_type(m.group(2).strip()),
@@ -687,8 +729,9 @@ class Parser:
                     'init': translate_expression(m.group(3).strip()),
                 }
 
+        # 8. Scalar without value
         if node is None:
-            m = re.match(r"Create '(\w+)' as an?\s+(.+)$", s)
+            m = re.match(r"Create '(\w+)' as an? (.+)$", s)
             if m:
                 node = {
                     'kind': 'declare', 'container': 'scalar', 'ctype': map_type(m.group(2).strip()),
@@ -799,7 +842,7 @@ class Parser:
 class CodeGen:
     """Walks the module AST and produces C source code."""
 
-    def __init__(self) -> None:
+    def __init__(self, symbols: Optional[SymbolTable] = None) -> None:
         self.includes: list[str] = []
         self.globals: list[str] = []
         self.global_inits: list[str] = []
@@ -809,6 +852,18 @@ class CodeGen:
         self._in_function: bool = False
         self._func_scalars: set[str] = set()
         self.triggered_includes: set[str] = set()
+        self.symbols = symbols
+        self._var_types: dict[str, str] = {}
+        self._var_sizes: dict[str, int] = {}
+        self._global_vars: set[str] = set()
+        self._loop_count = 0
+        if symbols:
+            for name, ctype, scope, size in symbols.as_rows():
+                self._var_types[name] = ctype
+                if size is not None:
+                    self._var_sizes[name] = size
+                if scope == 'global':
+                    self._global_vars.add(name)
 
     def generate(self, module: ASTNode) -> str:
         self._scan_triggers(module)
@@ -832,6 +887,9 @@ class CodeGen:
             for p_type, _ in f['params']:
                 check_type(p_type)
         
+        # Always trigger complex.h if we are going to emit complex-based prototypes
+        self.triggered_includes.add('complex.h')
+        
         # Check main body for Call triggers
         def scan_body(nodes: list[ASTNode]):
             for node in nodes:
@@ -842,7 +900,6 @@ class CodeGen:
                     if func == 'assert':
                         self.triggered_includes.add('assert.h')
                     if func in {
-                        'mean', 'standard_deviation', 'sample_mean', 'population_mean',
                         'sample_variance', 'population_variance', 'sample_std', 'population_std',
                         'median', 'mode', 'quantile', 'iqr', 'covariance', 'correlation',
                         'skewness', 'kurtosis', 't_test', 'paired_t_test', 'chi_square_test',
@@ -881,7 +938,7 @@ class CodeGen:
         prelude = [
             'stdio.h', 'stdlib.h', 'math.h', 'string.h', 'stdint.h', 
             'stdbool.h', 'float.h', 'limits.h', 'regex.h', 'ctype.h',
-            'stddef.h'
+            'stddef.h', 'alloca.h'
         ]
         required = set(prelude)
         required.update(self.triggered_includes)
@@ -906,6 +963,9 @@ class CodeGen:
         for node in nodes:
             self.main_body.extend(self._node_c(node, indent=1))
 
+    def _get_var_type(self, name: str) -> Optional[str]:
+        return self._var_types.get(name)
+
     def _node_c(self, node: ASTNode, indent: int) -> list[str]:
         pad = '    ' * indent
         kind = node['kind']
@@ -915,9 +975,38 @@ class CodeGen:
             return [pad + self._decl_c(node, scalars, arena_ref=self._arena_ref())]
 
         if kind == 'assign':
-            target = self._rewrite_expr(node['target'], scalars)
-            value = self._rewrite_expr(node['value'], scalars)
-            return [f'{pad}{target} = {value};']
+            target = node['target']
+            value = node['value']
+            
+            # Vector arithmetic check
+            target_type = self._get_var_type(target)
+            if target_type and target_type.startswith('vector<'):
+                m_arith = re.match(r'\((\w+) ([+\-*/]) (\w+)\)', value)
+                if not m_arith:
+                     # Check for Veritas keywords if they were translated
+                     m_arith = re.match(r'\((\w+) (plus|minus|multiplied by|divided by) (\w+)\)', value)
+
+                if m_arith:
+                    v1, op_sym, v2 = m_arith.groups()
+                    op_map = {'+': '+', '-': '-', '*': '*', '/': '/', 'plus': '+', 'minus': '-', 'multiplied by': '*', 'divided by': '/'}
+                    op = op_map.get(op_sym, op_sym)
+                    
+                    v_size = self._var_sizes.get(target, 1)
+                    if 'double complex' in target_type:
+                        func_map = {'+': 'vector_add', '-': 'vector_sub', '*': 'vector_mul'}
+                        if op in func_map:
+                             return [f'{pad}{func_map[op]}({v1}, {v2}, {target}, {v_size});']
+                    
+                    # Fallback to loop for better type safety with int/float
+                    ln = f"__i_{self._loop_count}"
+                    self._loop_count += 1
+                    return [
+                        f'{pad}for (int {ln} = 0; {ln} < {v_size}; {ln}++) {{ {target}[{ln}] = {v1}[{ln}] {op} {v2}[{ln}]; }}'
+                    ]
+            
+            target_c = self._rewrite_expr(target, scalars)
+            value_c = self._rewrite_expr(value, scalars)
+            return [f'{pad}{target_c} = {value_c};']
 
         if kind == 'call':
             args_str = ', '.join(self._rewrite_expr(arg, scalars) for arg in node['args'])
@@ -927,13 +1016,19 @@ class CodeGen:
             return [f'{pad}{self._rewrite_expr(node["dest"], scalars)} = {call};']
 
         if kind == 'for':
+            # inclusive means 'through' -> <=, exclusive means 'to' -> <
             op = '<=' if node['inclusive'] else '<'
             var = node['var']
             start = self._rewrite_expr(node['start'], scalars)
-            end = self._rewrite_expr(node['end'], scalars)
+            # Use a separate set to avoid dereferencing the loop variable 'var' itself in the loop condition
+            end_scalars = scalars.copy()
+            if var in end_scalars:
+                end_scalars.remove(var)
+            end = self._rewrite_expr(node['end'], end_scalars)
+            
             lines = [
                 f'{pad}{{',
-                f'{pad}    int *{var} = arena_alloc({self._arena_ref()}, sizeof(int));',
+                f'{pad}    int *{var} = alloca(sizeof(int));',
                 f'{pad}    *{var} = {start};',
                 f'{pad}    for (; *{var} {op} {end}; (*{var})++) {{',
             ]
@@ -965,23 +1060,37 @@ class CodeGen:
         ctype = node['ctype']
         name = node['name']
         container = node.get('container', 'array' if node.get('is_array') else 'scalar')
+        
+        is_global = not self._in_function and name in self._global_vars
+
+        if container == 'indexed_scalar':
+            scalar_vars.add(name)
+            decl = f'{ctype} *{name}' if not is_global else name
+            init_c = node['init'] # Already translated to "labels[0]" or similar
+            init_c = self._rewrite_expr(init_c, scalar_vars)
+            return f'{decl} = arena_alloc({arena_ref}, sizeof({ctype})); *{name} = {init_c};'
 
         if container in {'array', 'vector'}:
             size = node['size']
-            lines = [f'{ctype} *{name} = arena_alloc({arena_ref}, {size} * sizeof({ctype}));']
+            decl = f'{ctype} *{name}' if not is_global else name
+            lines = [f'{decl} = arena_alloc({arena_ref}, {size} * sizeof({ctype}));']
             if node['init']:
                 for idx, val in enumerate(node['init']):
-                    lines.append(f'{name}[{idx}] = {self._rewrite_expr(val, scalar_vars)};')
+                    lines.append(f'{name}[{idx}] = {translate_expression(val)};')
             return ' '.join(lines)
 
         if container == 'matrix':
-            return f'void *{name} = NULL; /* Matrix runtime object */'
+            decl = f'void *{name}' if not is_global else name
+            return f'{decl} = NULL; /* Matrix runtime object */'
 
         scalar_vars.add(name)
+        decl = f'{ctype} *{name}' if not is_global else name
         if node['init'] is not None:
-            init = self._rewrite_expr(node['init'], scalar_vars)
-            return f'{ctype} *{name} = arena_alloc({arena_ref}, sizeof({ctype})); *{name} = {init};'
-        return f'{ctype} *{name} = arena_alloc({arena_ref}, sizeof({ctype}));'
+            init_raw = node['init']
+            init_c = translate_value(init_raw)
+            init_c = self._rewrite_expr(init_c, scalar_vars)
+            return f'{decl} = arena_alloc({arena_ref}, sizeof({ctype})); *{name} = {init_c};'
+        return f'{decl} = arena_alloc({arena_ref}, sizeof({ctype}));'
 
     def _global_decl_c(self, node: ASTNode) -> str:
         ctype = node['ctype']
@@ -1015,6 +1124,13 @@ class CodeGen:
              pass
 
         out = expr
+        string_placeholders: dict[str, str] = {}
+        # Protect string literals
+        for i, match in enumerate(re.finditer(r'"[^"]*"', out)):
+            ph = f"__VER_STR_{i}__"
+            string_placeholders[ph] = match.group()
+            out = out.replace(match.group(), ph)
+
         placeholders: dict[str, str] = {}
         for idx, name in enumerate(sorted(scalar_vars, key=len, reverse=True)):
             placeholder = f'__ARENA_ADDR_{idx}__'
@@ -1027,8 +1143,15 @@ class CodeGen:
                 f'*{name}',
                 out,
             )
+        
+        # Restore addresses
         for placeholder, replacement in placeholders.items():
             out = out.replace(placeholder, replacement)
+        
+        # Restore strings
+        for ph, orig in string_placeholders.items():
+            out = out.replace(ph, orig)
+            
         return out
 
     def _func_c(self, func: ASTNode) -> list[str]:
@@ -1136,6 +1259,10 @@ class CodeGen:
             'double sample_uniform(double a, double b);',
             'double sample_poisson(double lambda);',
             'void solve_linear_system(double* a, double* b, int n, double* x);',
+            'void vector_add(double complex* a, double complex* b, double complex* out, int size);',
+            'void vector_sub(double complex* a, double complex* b, double complex* out, int size);',
+            'void vector_mul(double complex* a, double complex* b, double complex* out, int size);',
+            'void vector_mul_scalar(double complex* a, double complex scalar, double complex* out, int size);',
             'void matrix_multiply(double* a, double* b, int rows_a, int cols_a, int cols_b, double* out);',
             'void invert_matrix(double* a, int n, double* out);',
             'double determinant(double* a, int n);',

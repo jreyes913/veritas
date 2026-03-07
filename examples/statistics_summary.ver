@@ -1,0 +1,32 @@
+This is the program 'statistics_summary'.
+
+/* Analyze a set of data points using a Vector */
+Create 'data' as a double vector of size 5 with values: 
+    12.5, 
+    15.0, 
+    10.5, 
+    14.2, 
+    and 13.8.
+
+Create 'avg' as a double.
+Create 'std' as a double.
+Create 'variance' as a double.
+
+/* Use blessed statistical functions */
+Call 'mean' with 'data' and 5 stored to 'avg'.
+Call 'standard_deviation' with 'data' and 5 stored to 'std'.
+
+/* Calculate variance using 'raised to the' */
+Replace 'variance' with 'std' raised to the 2.
+
+/* Array: Metrics for reporting */
+Create 'metrics' as a string array of size 2 with values: "Mean" and "Standard Deviation".
+
+/* Matrix: Results table */
+Create 'results' as a matrix with columns: "metric" and "value".
+
+Create 'm0' as an element of 'metrics' at index 0.
+Create 'm1' as an element of 'metrics' at index 1.
+Call 'printf' with "%s: %.2f, %s: %.2f (Var: %.2f)\n", 'm0', 'avg', 'm1', 'std', and 'variance' stored to nothing.
+
+End of the program 'statistics_summary'.

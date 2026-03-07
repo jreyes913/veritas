@@ -1,0 +1,29 @@
+This is the program 'finance_analysis'.
+
+/* Calculate compound interest over time using a Vector */
+Create 'principal' as a double with value 10000.0.
+Create 'rate' as a double with value 0.05.
+Create 'years' as an int with value 10.
+Create 'balances' as a double vector of size 10.
+
+Create 'current_bal' as a double with value 'principal'.
+Create 'y' as an int.
+For every iteration of 'y' from 0 to 10:
+    Replace 'current_bal' with 'current_bal' multiplied by the quantity 1.0 plus 'rate'.
+    Replace 'balances' at index 'y' with 'current_bal'.
+End iteration of 'y' from 0 to 10.
+
+/* Array: Categories for report */
+Create 'categories' as a string array of size 2 with values: "Conservative" and "Aggressive".
+
+/* Matrix: Mixed data (like a portfolio summary) */
+Create 'portfolio' as a matrix with columns: "Account" and "TotalBalance".
+
+/* Future value calculation using 'raised to the' */
+Create 'rate_factor' as a double with value the quantity 1.0 plus 'rate' raised to the 'years'.
+Create 'future_val' as a double with value 'principal' multiplied by 'rate_factor'.
+
+Call 'printf' with "Year 5 Balance: %.2f\n" and an element of 'balances' at index 4 stored to nothing.
+Call 'printf' with "Future Value after %d years: %.2f\n", 'years', and 'future_val' stored to nothing.
+
+End of the program 'finance_analysis'.

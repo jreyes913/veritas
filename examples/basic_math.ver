@@ -1,0 +1,29 @@
+This is the program 'basic_math_plus'.
+
+/* Simple scalars */
+Create 'x' as an int with value 2.
+Create 'y' as an int with value 3.
+Create 'sum' as an int with value the quantity 'x' plus 'y'.
+Create 'square' as an int with value 'x' raised to the 2.
+
+/* Vector: Numerical-only type one column data */
+Create 'v1' as an int vector of size 3 with values: 10, 20, and 30.
+Create 'v2' as an int vector of size 3 with values: 1, 2, and 3.
+Create 'v_res' as an int vector of size 3.
+
+/* Array: Non-numerical type one column data */
+Create 'labels' as a string array of size 2 with values: "Initial" and "Result".
+
+/* Perform math operations */
+Replace 'v_res' with the quantity 'v1' plus 'v2'.
+
+/* Output results */
+Create 'label' as an element of 'labels' at index 0.
+Call 'printf' with "%s: %d + %d = %d\n", 'label', 'x', 'y', and 'sum' stored to nothing.
+
+Create 'v0' as an int.
+Replace 'v0' with an element of 'v_res' at index 0.
+Replace 'label' with an element of 'labels' at index 1.
+Call 'printf' with "%s v[0]: %d\n", 'label', and 'v0' stored to nothing.
+
+End of the program 'basic_math_plus'.

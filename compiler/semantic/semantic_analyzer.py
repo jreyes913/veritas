@@ -99,9 +99,9 @@ class SemanticAnalyzer:
                 return scope[name]
         return None
 
-    def _define(self, name: str, ctype: str, scope: str) -> None:
+    def _define(self, name: str, ctype: str, scope: str, size: Optional[int] = None) -> None:
         self._scope_stack[-1][name] = ctype
-        self.symbols.define(name, ctype, scope)
+        self.symbols.define(name, ctype, scope, size)
 
     def _push_scope(self) -> None:
         self._scope_stack.append(dict())
@@ -148,6 +148,22 @@ class SemanticAnalyzer:
         name = node['name']
         ctype = node['ctype']
         container = node.get('container', 'array' if node.get('is_array') else 'scalar')
+        size = node.get('size')
+
+        if container == 'indexed_scalar':
+            source_container = node['source_container'].replace('\x00', ' ').strip()
+            source_type = self._lookup(source_container)
+            if source_type is None:
+                raise SemanticError(f"Undefined container '{source_container}'")
+            if source_type.startswith('vector<') and source_type.endswith('>'):
+                ctype = source_type[7:-1].strip()
+            elif source_type.startswith('array<') and source_type.endswith('>'):
+                ctype = source_type[6:-1].strip()
+            else:
+                # Fallback or error if not a container
+                ctype = source_type
+            node['ctype'] = ctype # Update AST node with inferred type
+            container = 'scalar' # Treat as scalar for the rest of this method
 
         if container == 'vector' and not self._is_numeric_type(ctype):
             raise SemanticError(
@@ -168,7 +184,7 @@ class SemanticAnalyzer:
         elif container == 'matrix':
             declared_type = 'matrix'
 
-        self._define(name, declared_type, scope)
+        self._define(name, declared_type, scope, size=size)
 
         init = node.get('init')
         if container in {'array', 'vector'}:
@@ -241,6 +257,41 @@ class SemanticAnalyzer:
         expr = expr.strip()
         if not expr:
             return 'void'
+
+        while expr.startswith('(') and expr.endswith(')'):
+            # Only strip if it's a matching pair of outermost parens
+            depth = 0
+            balanced = True
+            for i in range(len(expr) - 1):
+                if expr[i] == '(': depth += 1
+                elif expr[i] == ')': depth -= 1
+                if depth == 0:
+                    balanced = False
+                    break
+            if balanced:
+                expr = expr[1:-1].strip()
+            else:
+                break
+
+        pow_args = self._split_pow_args(expr)
+        if pow_args:
+            left, right = pow_args
+            self._infer_expr_type(left, context=f"{context} (base)")
+            self._infer_expr_type(right, context=f"{context} (exponent)")
+            return 'double'
+
+        m_elem = re.match(r"an[\s\x00]element[\s\x00]of[\s\x00]'(\w+)'[\s\x00]at[\s\x00]index[\s\x00](?:'(.+?)'|(\w+))", expr)
+        if m_elem:
+            var_name = m_elem.group(1)
+            idx = m_elem.group(2) or m_elem.group(3)
+            ctype = self._lookup(var_name)
+            if ctype is None:
+                raise SemanticError(f"Undefined variable '{var_name}'")
+            if ctype.startswith('vector<') and ctype.endswith('>'):
+                return ctype[7:-1].strip()
+            if ctype.startswith('array<') and ctype.endswith('>'):
+                return ctype[6:-1].strip()
+            return ctype
 
         if expr.lower().startswith('the quantity '):
             return self._infer_expr_type(expr[len('the quantity '):].strip(), context=context)
@@ -360,6 +411,10 @@ class SemanticAnalyzer:
             ctype = self._lookup(base)
             if ctype is None:
                 raise SemanticError(f"Undefined variable '{base}'")
+            if ctype.startswith('vector<') and ctype.endswith('>'):
+                return ctype[7:-1].strip()
+            if ctype.startswith('array<') and ctype.endswith('>'):
+                return ctype[6:-1].strip()
             if ctype.endswith('*'):
                 return ctype[:-1].strip() or 'void'
             return ctype
@@ -399,7 +454,6 @@ class SemanticAnalyzer:
                     right = inner[i + 1:].strip()
                     if left and right:
                         return left, right
-                    return None
         return None
 
     def _binary_result_type(self, left: str, right: str, context: str) -> str:

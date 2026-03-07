@@ -59,12 +59,47 @@
     ],
     "description": "Create an array with values"
   },
+  "Create Indexed Element": {
+    "prefix": "create_index",
+    "body": [
+      "Create '${1:name}' as an element of '${2:container}' at index ${3:0}."
+    ],
+    "description": "Create a variable from an array/vector element"
+  },
+  "Create Vector": {
+    "prefix": "vector",
+    "body": [
+      "Create '${1:v}' as a ${2:double} vector of size ${3:3} with values: ${4:1.0}, ${5:2.0}, and ${6:3.0}."
+    ],
+    "description": "Create a vector with values"
+  },
+  "Create Matrix": {
+    "prefix": "matrix",
+    "body": [
+      "Create '${1:mat}' as a matrix with columns: \"${2:col1}\", and \"${3:col2}\"."
+    ],
+    "description": "Create a matrix with column names"
+  },
   "Call with stored to": {
     "prefix": "call",
     "body": [
       "Call '${1:func}' with ${2:args}, stored to ${3:nothing}."
     ],
     "description": "Call a function and store result"
+  },
+  "Replace with value": {
+    "prefix": "replace",
+    "body": [
+      "Replace '${1:var}' with ${2:value}."
+    ],
+    "description": "Replace variable value"
+  },
+  "Replace at index": {
+    "prefix": "index_replace",
+    "body": [
+      "Replace '${1:var}' at index ${2:0} with ${3:value}."
+    ],
+    "description": "Replace array/vector element at index"
   },
   "Replace with quantity": {
     "prefix": "replace",

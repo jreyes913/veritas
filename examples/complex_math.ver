@@ -9,16 +9,19 @@ Create 'c1' as a double complex with value 1.5 plus 2.5j.
 Create 'c2' as a double complex with value 0.5 minus 1.0j.
 Create 'result' as a double complex with value the quantity 'c1' multiplied by 'c2'.
 
-/* Calculate components for Euler's formula */
+/* Vector: Complex-only numeric data */
+Create 'signals' as a double complex vector of size 2 with values: 1.0 plus 1j and 2.0 minus 2.0j.
+Create 'modifiers' as a double complex vector of size 2 with values: 0.5 plus 0j and 0.5 plus 0j.
+Create 'out_sig' as a double complex vector of size 2.
+
+/* Vector math works on complex types too! */
+Replace 'out_sig' with the quantity 'signals' multiplied by 'modifiers'.
+
+/* Matrix: Mixed data (like a complex dataframe) */
+Create 'dataset' as a matrix with columns: "channel_id" and "signal_value".
+
 Create 're' as a double.
 Create 'im' as a double.
-Call 'cos' with 'x', stored to 're'.
-Call 'sin' with 'x', stored to 'im'.
-
-/* Compose using the 1j literal */
-Replace 'euler_complex' with the quantity 're' plus 'im' multiplied by 1j.
-
-Call 'printf' with "Euler complex real: %.4f, imaginary: %.4f\n", 're', and 'im' stored to nothing.
 Call 'creal' with 'result', stored to 're'.
 Call 'cimag' with 'result', stored to 'im'.
 Call 'printf' with "Complex product: %.4f + %.4fi\n", 're', and 'im' stored to nothing.

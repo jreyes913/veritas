@@ -30,7 +30,7 @@ class ArenaAllocatorTests(unittest.TestCase):
             """
         )
         c_src = compile_veritas(src)
-        self.assertIn('double *t = arena_alloc(&arena, 100 * sizeof(double));', c_src)
+        self.assertIn('t = arena_alloc(&arena, 100 * sizeof(double));', c_src)
 
     def test_arena_overflow_handling(self) -> None:
         c_src = textwrap.dedent(

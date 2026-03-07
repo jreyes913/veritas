@@ -48,7 +48,7 @@ class VectorMatrixArrayTypeTests(unittest.TestCase):
         src = textwrap.dedent(
             """
             This is the program 'matrix_decl'.
-            Create 'data' as a matrix with columns: "temperature", and "label".
+            Create 'data' as a matrix with columns: "temperature" and "label".
             End of the program 'matrix_decl'.
             """
         )

@@ -1,0 +1,45 @@
+This is the program 'finance_engineering'.
+
+/* Engineering: Physics calculation with vectors */
+Create 'position' as a double vector of size 3 with values: 0.0, 0.0, and 0.0.
+Create 'velocity' as a double vector of size 3 with values: 10.0, 5.0, and 2.0.
+Create 'dt' as a double with value 0.1.
+
+/* Array: Component names */
+Create 'comps' as a string array of size 3 with values: "X", "Y", and "Z".
+
+/* Matrix: State Vector for math operations */
+Create 'state_vec' as a matrix.
+
+/* Update position using loop to show 'nuts and bolts' */
+Create 'i' as an int.
+For every iteration of 'i' from 0 to 3:
+    Create 'v' as an element of 'velocity' at index 'i'.
+    Create 'p' as an element of 'position' at index 'i'.
+    Replace 'p' with the quantity 'p' plus 'v' multiplied by 'dt'.
+    Replace 'position' at index 'i' with 'p'.
+End iteration of 'i' from 0 to 3.
+
+/* Finance: Portfolio return with weighted vectors */
+Create 'returns' as a double vector of size 3 with values: 0.05, 0.12, and -0.02.
+Create 'weights' as a double vector of size 3 with values: 0.4, 0.4, and 0.2.
+Create 'weighted_returns' as a double vector of size 3.
+
+/* Matrix: Mixed data (Portfolio Snapshot) */
+Create 'portfolio_data' as a matrix with columns: "Asset", "Weight", and "ExpectedReturn".
+
+For every iteration of 'i' from 0 to 3:
+    Create 'r' as an element of 'returns' at index 'i'.
+    Create 'w' as an element of 'weights' at index 'i'.
+    Create 'r_sq' as a double with value 'r' raised to the 2.
+    Create 'res' as a double with value the quantity 'r' multiplied by 'w'.
+    Replace 'weighted_returns' at index 'i' with 'res'.
+End iteration of 'i' from 0 to 3.
+
+Create 'total_return' as a double.
+Call 'mean' with 'weighted_returns' and 3 stored to 'total_return'.
+Replace 'total_return' with the quantity 'total_return' multiplied by 3.0.
+
+Call 'printf' with "Total Portfolio Return: %.4f\n" and 'total_return' stored to nothing.
+
+End of the program 'finance_engineering'.

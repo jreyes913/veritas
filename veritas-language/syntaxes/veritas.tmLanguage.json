@@ -55,7 +55,7 @@
     "keyword_green": {
       "patterns": [
         { "name": "veritas.kw.green", "match": "\\b(as|an|a)\\b" },
-        { "name": "storage.type.veritas", "match": "\\b(nothing|string|int|float|double|complex|pointer|unsigned|uint\\d+_t|int\\d+_t)\\b" }
+        { "name": "storage.type.veritas", "match": "\\b(nothing|string|int|float|double|complex|vector|matrix|pointer|unsigned|uint\\d+_t|int\\d+_t)\\b" }
       ]
     },
     "keyword_purple": {
