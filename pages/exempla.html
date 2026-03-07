@@ -156,7 +156,7 @@
 <span class="kw-ctrl">For every iteration</span> of <span class="kw-ident">'y'</span> from <span class="kw-num">1</span> through <span class="kw-ident">'years'</span>:
     <span class="kw-call">Replace</span> <span class="kw-ident">'principal'</span> with <span class="kw-ident">'principal'</span> <span class="kw-op">multiplied by</span> <span class="kw-ident">the quantity</span> <span class="kw-num">1.0</span> <span class="kw-op">plus</span> <span class="kw-ident">'rate'</span>.
     <span class="kw-call">Call</span> <span class="kw-ident">'printf'</span> with <span class="kw-str">"Year %d: %.2f
-"</span>, <span class="kw-ident">'y'</span>, and <span class="kw-ident">'principal'</span>, stored to nothing.
+"</span> and <span class="kw-ident">'y'</span> and <span class="kw-ident">'principal'</span>, stored to nothing.
 <span class="kw-ctrl">End iteration</span> of <span class="kw-ident">'y'</span> from <span class="kw-num">1</span> through <span class="kw-ident">'years'</span>.
 
 <span class="kw-ctrl">End of the program</span> <span class="kw-ident">'finance'</span>.</code></pre>
@@ -171,37 +171,33 @@
 <span class="kw-decl">Create</span> <span class="kw-ident">'t'</span> <span class="kw-type">as a double</span> with value <span class="kw-num">2.5</span>.
 <span class="kw-decl">Create</span> <span class="kw-ident">'height'</span> <span class="kw-type">as a double</span>.
 
-<span class="kw-cmt">/* h = 0.5 * g * t^2 */</span>
-<span class="kw-call">Replace</span> <span class="kw-ident">'height'</span> with <span class="kw-num">0.5</span> <span class="kw-op">multiplied by</span> <span class="kw-ident">'g'</span> <span class="kw-op">multiplied by</span> <span class="kw-ident">'t'</span> <span class="kw-op">multiplied by</span> <span class="kw-ident">'t'</span>.
+<span class="kw-cmt">/* h = 0.5 * g * t^2 using exponents */</span>
+<span class="kw-decl">Create</span> <span class="kw-ident">'t_sq'</span> <span class="kw-type">as a double</span> with value <span class="kw-ident">'t'</span> <span class="kw-op">raised to the</span> <span class="kw-num">2</span>.
+<span class="kw-call">Replace</span> <span class="kw-ident">'height'</span> with <span class="kw-num">0.5</span> <span class="kw-op">multiplied by</span> <span class="kw-ident">'g'</span> <span class="kw-op">multiplied by</span> <span class="kw-ident">'t_sq'</span>.
 
 <span class="kw-call">Call</span> <span class="kw-ident">'printf'</span> with <span class="kw-str">"Distance: %.2f meters
-"</span>, <span class="kw-ident">'height'</span>, stored to nothing.
+"</span> and <span class="kw-ident">'height'</span>, stored to nothing.
 
 <span class="kw-ctrl">End of the program</span> <span class="kw-ident">'physics'</span>.</code></pre>
   </section>
 
   <section class="section">
     <p class="section-number">§ III</p>
-    <h2>Math: Complex Euler</h2>
-    <pre><code><span class="kw-ctrl">This is the program</span> <span class="kw-ident">'euler'</span>.
+    <h2>Math: Vector Operations</h2>
+    <pre><code><span class="kw-ctrl">This is the program</span> <span class="kw-ident">'vectors'</span>.
 
-<span class="kw-decl">Create</span> <span class="kw-ident">'x'</span> <span class="kw-type">as a double</span> with value <span class="kw-num">3.14159</span>.
-<span class="kw-decl">Create</span> <span class="kw-ident">'euler'</span> <span class="kw-type">as a double complex</span>.
+<span class="kw-decl">Create</span> <span class="kw-ident">'v1'</span> <span class="kw-type">as a double vector</span> of size <span class="kw-num">3</span> with values: <span class="kw-num">1.0</span>, <span class="kw-num">2.0</span>, and <span class="kw-num">3.0</span>.
+<span class="kw-decl">Create</span> <span class="kw-ident">'v2'</span> <span class="kw-type">as a double vector</span> of size <span class="kw-num">3</span> with values: <span class="kw-num">10.0</span>, <span class="kw-num">20.0</span>, and <span class="kw-num">30.0</span>.
+<span class="kw-decl">Create</span> <span class="kw-ident">'res'</span> <span class="kw-type">as a double vector</span> of size <span class="kw-num">3</span>.
 
-<span class="kw-decl">Create</span> <span class="kw-ident">'re'</span> <span class="kw-type">as a double</span>.
-<span class="kw-decl">Create</span> <span class="kw-ident">'im'</span> <span class="kw-type">as a double</span>.
+<span class="kw-call">Replace</span> <span class="kw-ident">'res'</span> with <span class="kw-ident">the quantity</span> <span class="kw-ident">'v1'</span> <span class="kw-op">plus</span> <span class="kw-ident">'v2'</span>.
 
-<span class="kw-call">Call</span> <span class="kw-ident">'cos'</span> with <span class="kw-ident">'x'</span>, stored to <span class="kw-ident">'re'</span>.
-<span class="kw-call">Call</span> <span class="kw-ident">'sin'</span> with <span class="kw-ident">'x'</span>, stored to <span class="kw-ident">'im'</span>.
-
-<span class="kw-call">Replace</span> <span class="kw-ident">'euler'</span> with <span class="kw-ident">the quantity</span> <span class="kw-ident">'re'</span> <span class="kw-op">plus</span> <span class="kw-ident">'im'</span> <span class="kw-op">multiplied by</span> <span class="kw-num">1j</span>.
-
-<span class="kw-ctrl">End of the program</span> <span class="kw-ident">'euler'</span>.</code></pre>
+<span class="kw-ctrl">End of the program</span> <span class="kw-ident">'vectors'</span>.</code></pre>
   </section>
 
   <footer>
     <span>REGULA VERITATIS</span>
-    <span>v1.2.0</span>
+    <span>v1.3.1</span>
   </footer>
 </div>
 </body>

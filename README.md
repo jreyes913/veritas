@@ -1,10 +1,10 @@
-# Veritas (v1.2.0)
+# Veritas (v1.3.1)
 
 > *A programming language designed to resemble clear, structured human English while remaining deterministic and easy to parse.*
 
 Veritas compiles `.ver` source files to C via a Python transpiler (`vcparser.py`). Programs read like well-structured English instructions — every statement follows strict grammatical rules that map unambiguously to C output.
 
-Version 1.2.0 introduces first-class managed strings, an intelligent prelude system, and built-in support for industry-standard scientific libraries.
+Version 1.3.1 introduces first-class **Vectors** and **Matrices**, indexed element access/creation, and the **"raised to the"** exponent operator.
 
 ---
 
@@ -17,15 +17,19 @@ Version 1.2.0 introduces first-class managed strings, an intelligent prelude sys
 ## Key Features
 
 - **Natural Syntax**: Statements like `Create 'x' as an integer with value 10.`
-- **Managed Strings**: First-class `string` type. No more manual `char*` buffers. Concatenate with `Call 'join'` and compare with `is equal to`.
+- **Managed Data Structures**:
+    - **Vectors**: Numeric-only sequences with math support (`plus`, `minus`, `multiplied by`).
+    - **Arrays**: Non-numeric sequences for strings or other types.
+    - **Matrices**: Multi-dimensional structures for math or mixed data.
+- **Managed Strings**: First-class `string` type. Concatenate with `Call 'join'` and compare with `is equal to`.
+- **Advanced Math**: Native support for **Exponents** (`raised to the`) and **Complex Arithmetic** (`1j`, `4.2j`).
+- **Indexed Access**: Create variables from elements (`Create 'x' as an element of 'arr' at index 0`) or update them directly (`Replace 'arr' at index 0 with 5`).
 - **Intelligent Prelude**: Common C headers (`stdio.h`, `math.h`, etc.) are included automatically. Scientific headers like `complex.h`, `fftw3.h`, and `gsl_statistics.h` are injected when needed.
-- **Blessed Libraries**: Call high-performance functions like `mean`, `standard_deviation`, and `fft_forward` directly.
 - **Strict Grammar**: Deterministic list formatting ensures clarity:
     - 1 item: `X`
-    - 2 items: `X and Y`
+    - 2 items: `X and Y` (No commas).
     - 3+ items: `X, Y, and Z` (Oxford comma required).
 - **Direct C Interop**: Use any C type directly (e.g., `uint32_t`).
-- **Complex Arithmetic**: Native support for imaginary literals like `1j` and `4.2j`.
 
 ---
 
